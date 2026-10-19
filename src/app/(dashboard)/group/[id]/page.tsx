@@ -22,7 +22,9 @@ import {
   UserPlus, 
   AlertCircle, 
   ArrowLeft,
-  Plus
+  Plus,
+  Menu,
+  X
 } from "lucide-react";
 
 export default function GroupWorkspacePage() {
@@ -37,6 +39,7 @@ export default function GroupWorkspacePage() {
   const [activeChannel, setActiveChannel] = useState("general");
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [showRightSidebar, setShowRightSidebar] = useState(true);
+  const [showMobileLeftSidebar, setShowMobileLeftSidebar] = useState(false);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
 
   // Active Modals
@@ -130,7 +133,6 @@ export default function GroupWorkspacePage() {
     addResource(group.id, newDoc, true);
   };
 
-  // Sending a new text message
   const handleSendMessage = (text: string) => {
     addMessage(group.id, {
       sender: user?.displayName ? `${user.displayName} (You)` : "You",
@@ -141,7 +143,6 @@ export default function GroupWorkspacePage() {
     });
   };
 
-  // Sending a new voice note
   const handleSendVoiceNote = (duration: string) => {
     addMessage(group.id, {
       sender: user?.displayName ? `${user.displayName} (You)` : "You",
@@ -153,73 +154,110 @@ export default function GroupWorkspacePage() {
     });
   };
 
-  // Dropping an uploaded file into the group vault + chat feed
-  const handleUploadSuccess = (newDoc: PreviewDocument, messageText?: string) => {
+  const handleUploadSuccess = (newDoc: PreviewDocument) => {
     addResource(group.id, newDoc, true);
   };
 
-  // Bookmark toggle
   const handleBookmarkToggle = (docId: string) => {
     setBookmarkedIds((prev) =>
       prev.includes(docId) ? prev.filter((id) => id !== docId) : [...prev, docId]
     );
   };
 
-  // Reaction toggle
-  const handleAddReaction = (messageId: string, emoji: string) => {
-    // Reaction state update
-  };
-
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#0B0F19] text-gray-100 selection:bg-brand-500 selection:text-white relative">
-      {/* 1. Left Group Sidebar (Channels, Subjects, Real Members) */}
-      <GroupSidebar
-        groupId={group.id}
-        groupName={group.name}
-        inviteCode={group.inviteCode}
-        members={group.members}
-        activeChannel={activeChannel}
-        onSelectChannel={setActiveChannel}
-        selectedSubject={selectedSubject}
-        onSelectSubject={setSelectedSubject}
-        onOpenAddMember={() => setIsAddMemberOpen(true)}
-      />
+      {/* 1. Left Group Sidebar (Desktop always visible, Mobile in drawer) */}
+      <div className="hidden md:flex flex-shrink-0">
+        <GroupSidebar
+          groupId={group.id}
+          groupName={group.name}
+          inviteCode={group.inviteCode}
+          members={group.members}
+          activeChannel={activeChannel}
+          onSelectChannel={setActiveChannel}
+          selectedSubject={selectedSubject}
+          onSelectSubject={setSelectedSubject}
+          onOpenAddMember={() => setIsAddMemberOpen(true)}
+        />
+      </div>
 
-      {/* 2. Main Chat Workspace (Center) */}
-      <main className="flex-1 flex flex-col min-w-0 bg-[#0F172A] relative">
+      {/* Mobile Drawer Sidebar */}
+      {showMobileLeftSidebar && (
+        <div className="fixed inset-0 z-50 md:hidden flex">
+          <div 
+            onClick={() => setShowMobileLeftSidebar(false)}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm" 
+          />
+          <div className="relative z-10 w-72 h-full bg-[#0D1321] shadow-2xl flex flex-col">
+            <GroupSidebar
+              groupId={group.id}
+              groupName={group.name}
+              inviteCode={group.inviteCode}
+              members={group.members}
+              activeChannel={activeChannel}
+              onSelectChannel={(ch) => {
+                setActiveChannel(ch);
+                setShowMobileLeftSidebar(false);
+              }}
+              selectedSubject={selectedSubject}
+              onSelectSubject={setSelectedSubject}
+              onOpenAddMember={() => {
+                setIsAddMemberOpen(true);
+                setShowMobileLeftSidebar(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* 2. Main Chat Workspace (Center) - Guaranteed No Glitches & No Overlap */}
+      <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-[#0F172A] relative">
         {/* Workspace Top Header Bar */}
-        <header className="h-14 border-b border-white/5 bg-[#0B0F19]/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center gap-2 min-w-0">
+        <header className="h-14 sm:h-16 border-b border-white/5 bg-[#0B0F19]/90 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between flex-shrink-0 z-10">
+          <div className="flex items-center gap-2.5 min-w-0">
+            {/* Mobile menu trigger */}
+            <button
+              type="button"
+              onClick={() => setShowMobileLeftSidebar(true)}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-white md:hidden hover:bg-white/5"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+
             <span className="text-gray-400 font-medium text-sm">#</span>
-            <h1 className="font-bold text-sm text-white truncate">
+            <h2 className="font-bold text-xs sm:text-sm text-white truncate max-w-[140px] sm:max-w-xs">
               {activeChannel === "general" ? "study-chat-drops" : activeChannel}
-            </h1>
-            <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-white/5 border border-white/10 px-2.5 py-0.5 text-[11px] text-gray-300">
+            </h2>
+            <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-white/5 border border-white/10 px-2.5 py-0.5 text-[11px] text-gray-300 font-medium">
               {group.members.length} Member{group.members.length === 1 ? "" : "s"}
             </span>
           </div>
 
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={() => setIsAddMemberOpen(true)}
-              className="flex items-center gap-1.5 rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 text-xs font-semibold hover:bg-emerald-600 hover:text-white transition"
+              className="flex items-center gap-1.5 rounded-xl bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 px-2.5 sm:px-3 py-1.5 text-xs font-semibold hover:bg-emerald-600 hover:text-white transition active:scale-95 shadow-sm"
               title="Add friends by registered email"
             >
               <UserPlus className="h-3.5 w-3.5" />
-              <span>+ Add People</span>
+              <span className="hidden sm:inline">+ Add People</span>
             </button>
 
             <button
+              type="button"
               onClick={() => setIsUploadOpen(true)}
-              className="flex items-center gap-1.5 rounded-lg bg-brand-600/20 text-brand-400 border border-brand-500/30 px-3 py-1.5 text-xs font-semibold hover:bg-brand-600 hover:text-white transition"
+              className="flex items-center gap-1.5 rounded-xl bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white shadow-md shadow-brand-500/25 hover:bg-brand-500 transition active:scale-95"
             >
-              <span>+ Drop Note</span>
+              <Plus className="h-3.5 w-3.5" />
+              <span>Drop Note</span>
             </button>
 
             {/* Toggle Right Vault Panel */}
             <button
+              type="button"
               onClick={() => setShowRightSidebar(!showRightSidebar)}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition"
+              className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition"
               title={showRightSidebar ? "Collapse Study Vault" : "Expand Study Vault"}
             >
               {showRightSidebar ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
@@ -227,16 +265,16 @@ export default function GroupWorkspacePage() {
           </div>
         </header>
 
-        {/* Real-time WhatsApp-Style Feed */}
+        {/* Real-time WhatsApp-Style Feed with Isolated Scrolling */}
         <ChatFeed
           messages={group.messages}
           onPreview={(doc) => setPreviewDoc(doc)}
           onBookmark={handleBookmarkToggle}
           bookmarkedIds={bookmarkedIds}
-          onAddReaction={handleAddReaction}
+          onAddReaction={() => {}}
         />
 
-        {/* Input Bar with Voice Notes */}
+        {/* Input Bar with Voice Notes (Never Collides) */}
         <ChatInput
           onSendMessage={handleSendMessage}
           onSendVoiceNote={handleSendVoiceNote}
@@ -244,16 +282,18 @@ export default function GroupWorkspacePage() {
         />
       </main>
 
-      {/* 3. Right Sidebar: Group Study Vault (Permanent Folders) */}
+      {/* 3. Right Sidebar: Group Study Vault (Collapsible on mobile and desktop) */}
       {showRightSidebar && (
-        <StudyVaultSidebar
-          resources={group.resources}
-          onPreview={(doc) => setPreviewDoc(doc)}
-          onBookmark={handleBookmarkToggle}
-          bookmarkedIds={bookmarkedIds}
-          onOpenUpload={() => setIsUploadOpen(true)}
-          selectedSubject={selectedSubject}
-        />
+        <div className="hidden lg:flex flex-shrink-0 h-full">
+          <StudyVaultSidebar
+            resources={group.resources}
+            onPreview={(doc) => setPreviewDoc(doc)}
+            onBookmark={handleBookmarkToggle}
+            bookmarkedIds={bookmarkedIds}
+            onOpenUpload={() => setIsUploadOpen(true)}
+            selectedSubject={selectedSubject}
+          />
+        </div>
       )}
 
       {/* PDF & Image In-Browser Preview Modal */}
