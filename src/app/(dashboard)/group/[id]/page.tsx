@@ -24,7 +24,8 @@ import {
   ArrowLeft,
   Plus,
   Menu,
-  X
+  X,
+  BookOpen
 } from "lucide-react";
 
 export default function GroupWorkspacePage() {
@@ -39,7 +40,8 @@ export default function GroupWorkspacePage() {
   const [activeChannel, setActiveChannel] = useState("general");
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [showRightSidebar, setShowRightSidebar] = useState(true);
-  const [showMobileLeftSidebar, setShowMobileLeftSidebar] = useState(false);
+  const [showMobileLeftDrawer, setShowMobileLeftDrawer] = useState(false);
+  const [showMobileVaultDrawer, setShowMobileVaultDrawer] = useState(false);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
 
   // Active Modals
@@ -85,10 +87,9 @@ export default function GroupWorkspacePage() {
     };
   }, []);
 
-  // If group not found
   if (!group) {
     return (
-      <div className="min-h-screen bg-[#0B0F19] text-gray-100 flex items-center justify-center p-4">
+      <div className="min-h-[100dvh] bg-[#0B0F19] text-gray-100 flex items-center justify-center p-4">
         <div className="max-w-md w-full rounded-2xl border border-white/10 bg-[#111827] p-8 text-center space-y-4 glass-panel">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-500/10 text-brand-400 border border-brand-500/20 mx-auto">
             <AlertCircle className="h-7 w-7 text-brand-400" />
@@ -111,7 +112,6 @@ export default function GroupWorkspacePage() {
     );
   }
 
-  // Dropping files on the full-screen overlay
   const handleFullWindowFileDrop = (files: FileList) => {
     setIsDraggingFile(false);
     if (!files.length) return;
@@ -165,9 +165,9 @@ export default function GroupWorkspacePage() {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#0B0F19] text-gray-100 selection:bg-brand-500 selection:text-white relative">
-      {/* 1. Left Group Sidebar (Desktop always visible, Mobile in drawer) */}
-      <div className="hidden md:flex flex-shrink-0">
+    <div className="flex h-[100dvh] w-screen overflow-hidden bg-[#0B0F19] text-gray-100 selection:bg-brand-500 selection:text-white relative">
+      {/* 1. DESKTOP LEFT SIDEBAR */}
+      <div className="hidden md:flex flex-shrink-0 h-full">
         <GroupSidebar
           groupId={group.id}
           groupName={group.name}
@@ -181,14 +181,14 @@ export default function GroupWorkspacePage() {
         />
       </div>
 
-      {/* Mobile Drawer Sidebar */}
-      {showMobileLeftSidebar && (
-        <div className="fixed inset-0 z-50 md:hidden flex">
+      {/* MOBILE LEFT DRAWER (Channels & Members) */}
+      {showMobileLeftDrawer && (
+        <div className="fixed inset-0 z-50 md:hidden flex animate-in fade-in duration-200">
           <div 
-            onClick={() => setShowMobileLeftSidebar(false)}
+            onClick={() => setShowMobileLeftDrawer(false)}
             className="fixed inset-0 bg-black/80 backdrop-blur-sm" 
           />
-          <div className="relative z-10 w-72 h-full bg-[#0D1321] shadow-2xl flex flex-col">
+          <div className="relative z-10 w-72 max-w-[85vw] h-full bg-[#0D1321] shadow-2xl flex flex-col">
             <GroupSidebar
               groupId={group.id}
               groupName={group.name}
@@ -197,43 +197,50 @@ export default function GroupWorkspacePage() {
               activeChannel={activeChannel}
               onSelectChannel={(ch) => {
                 setActiveChannel(ch);
-                setShowMobileLeftSidebar(false);
+                setShowMobileLeftDrawer(false);
               }}
               selectedSubject={selectedSubject}
               onSelectSubject={setSelectedSubject}
               onOpenAddMember={() => {
                 setIsAddMemberOpen(true);
-                setShowMobileLeftSidebar(false);
+                setShowMobileLeftDrawer(false);
               }}
             />
           </div>
         </div>
       )}
 
-      {/* 2. Main Chat Workspace (Center) - Guaranteed No Glitches & No Overlap */}
+      {/* 2. MAIN CHAT WORKSPACE (100% Mobile Safe with 100dvh) */}
       <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-[#0F172A] relative">
         {/* Workspace Top Header Bar */}
-        <header className="h-14 sm:h-16 border-b border-white/5 bg-[#0B0F19]/90 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between flex-shrink-0 z-10">
-          <div className="flex items-center gap-2.5 min-w-0">
+        <header className="h-14 sm:h-16 border-b border-white/5 bg-[#0B0F19]/95 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between flex-shrink-0 z-10">
+          <div className="flex items-center gap-2 min-w-0">
             {/* Mobile menu trigger */}
             <button
               type="button"
-              onClick={() => setShowMobileLeftSidebar(true)}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-white md:hidden hover:bg-white/5"
+              onClick={() => setShowMobileLeftDrawer(true)}
+              className="p-2 -ml-1 rounded-xl text-gray-400 hover:text-white md:hidden hover:bg-white/5 active:scale-95 transition"
+              title="Open channels"
             >
               <Menu className="h-5 w-5" />
             </button>
 
-            <span className="text-gray-400 font-medium text-sm">#</span>
-            <h2 className="font-bold text-xs sm:text-sm text-white truncate max-w-[140px] sm:max-w-xs">
-              {activeChannel === "general" ? "study-chat-drops" : activeChannel}
-            </h2>
-            <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-white/5 border border-white/10 px-2.5 py-0.5 text-[11px] text-gray-300 font-medium">
-              {group.members.length} Member{group.members.length === 1 ? "" : "s"}
+            <span className="text-gray-500 font-medium text-sm hidden xs:inline">#</span>
+            <div className="min-w-0">
+              <h2 className="font-bold text-xs sm:text-sm text-white truncate max-w-[120px] xs:max-w-[160px] sm:max-w-xs">
+                {activeChannel === "general" ? "study-chat-drops" : activeChannel}
+              </h2>
+              <span className="text-[10px] text-gray-400 block xs:hidden truncate">
+                {group.name}
+              </span>
+            </div>
+            <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-white/5 border border-white/10 px-2 py-0.5 text-[10px] text-gray-300 font-medium">
+              {group.members.length} Members
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Action buttons (Clean responsive icons on mobile) */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <button
               type="button"
               onClick={() => setIsAddMemberOpen(true)}
@@ -247,20 +254,31 @@ export default function GroupWorkspacePage() {
             <button
               type="button"
               onClick={() => setIsUploadOpen(true)}
-              className="flex items-center gap-1.5 rounded-xl bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white shadow-md shadow-brand-500/25 hover:bg-brand-500 transition active:scale-95"
+              className="flex items-center gap-1.5 rounded-xl bg-brand-600 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-white shadow-md shadow-brand-500/25 hover:bg-brand-500 transition active:scale-95"
+              title="Upload study material"
             >
               <Plus className="h-3.5 w-3.5" />
-              <span>Drop Note</span>
+              <span className="hidden sm:inline">Drop Note</span>
             </button>
 
-            {/* Toggle Right Vault Panel */}
+            {/* Desktop Vault Toggle */}
             <button
               type="button"
               onClick={() => setShowRightSidebar(!showRightSidebar)}
-              className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition"
+              className="hidden lg:flex p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition active:scale-95"
               title={showRightSidebar ? "Collapse Study Vault" : "Expand Study Vault"}
             >
               {showRightSidebar ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
+            </button>
+
+            {/* Mobile Vault Button (Opens Slide-over Drawer) */}
+            <button
+              type="button"
+              onClick={() => setShowMobileVaultDrawer(true)}
+              className="lg:hidden p-2 rounded-xl text-accent-sky hover:bg-accent-sky/10 border border-accent-sky/20 transition active:scale-95"
+              title="Open Group Study Vault"
+            >
+              <FolderGit2 className="h-4 w-4" />
             </button>
           </div>
         </header>
@@ -274,7 +292,7 @@ export default function GroupWorkspacePage() {
           onAddReaction={() => {}}
         />
 
-        {/* Input Bar with Voice Notes (Never Collides) */}
+        {/* Input Bar with Voice Notes (Never Collides with Mobile Viewport) */}
         <ChatInput
           onSendMessage={handleSendMessage}
           onSendVoiceNote={handleSendVoiceNote}
@@ -282,7 +300,7 @@ export default function GroupWorkspacePage() {
         />
       </main>
 
-      {/* 3. Right Sidebar: Group Study Vault (Collapsible on mobile and desktop) */}
+      {/* 3. DESKTOP RIGHT SIDEBAR: STUDY VAULT */}
       {showRightSidebar && (
         <div className="hidden lg:flex flex-shrink-0 h-full">
           <StudyVaultSidebar
@@ -293,6 +311,47 @@ export default function GroupWorkspacePage() {
             onOpenUpload={() => setIsUploadOpen(true)}
             selectedSubject={selectedSubject}
           />
+        </div>
+      )}
+
+      {/* MOBILE STUDY VAULT SLIDE-OVER DRAWER */}
+      {showMobileVaultDrawer && (
+        <div className="fixed inset-0 z-50 lg:hidden flex justify-end animate-in fade-in duration-200">
+          <div 
+            onClick={() => setShowMobileVaultDrawer(false)}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm" 
+          />
+          <div className="relative z-10 w-80 max-w-[88vw] h-full bg-[#0D1321] shadow-2xl flex flex-col">
+            <div className="p-3 border-b border-white/5 bg-[#0F172A] flex items-center justify-between">
+              <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                <FolderGit2 className="h-4 w-4 text-brand-400" />
+                Group Study Vault
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowMobileVaultDrawer(false)}
+                className="p-1 rounded-lg text-gray-400 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <StudyVaultSidebar
+                resources={group.resources}
+                onPreview={(doc) => {
+                  setPreviewDoc(doc);
+                  setShowMobileVaultDrawer(false);
+                }}
+                onBookmark={handleBookmarkToggle}
+                bookmarkedIds={bookmarkedIds}
+                onOpenUpload={() => {
+                  setIsUploadOpen(true);
+                  setShowMobileVaultDrawer(false);
+                }}
+                selectedSubject={selectedSubject}
+              />
+            </div>
+          </div>
         </div>
       )}
 

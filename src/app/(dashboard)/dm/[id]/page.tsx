@@ -16,7 +16,7 @@ import {
   MessageSquare, 
   FileText, 
   AlertCircle,
-  Smartphone
+  Plus
 } from "lucide-react";
 
 export default function DirectChatPage() {
@@ -35,7 +35,7 @@ export default function DirectChatPage() {
 
   if (!chat) {
     return (
-      <div className="min-h-screen bg-[#0B0F19] text-gray-100 flex items-center justify-center p-4">
+      <div className="min-h-[100dvh] bg-[#0B0F19] text-gray-100 flex items-center justify-center p-4">
         <div className="max-w-md w-full rounded-2xl border border-white/10 bg-[#111827] p-8 text-center space-y-4 glass-panel">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-500/10 text-brand-400 border border-brand-500/20 mx-auto">
             <AlertCircle className="h-7 w-7 text-brand-400" />
@@ -77,13 +77,13 @@ export default function DirectChatPage() {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#0B0F19] text-gray-100 flex-col selection:bg-brand-500 selection:text-white">
+    <div className="flex h-[100dvh] w-screen overflow-hidden bg-[#0B0F19] text-gray-100 flex-col selection:bg-brand-500 selection:text-white">
       {/* Top Header */}
-      <header className="h-16 border-b border-white/5 bg-[#0F172A] px-4 sm:px-6 flex items-center justify-between flex-shrink-0 z-20">
-        <div className="flex items-center gap-3 min-w-0">
+      <header className="h-14 sm:h-16 border-b border-white/5 bg-[#0F172A]/95 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between flex-shrink-0 z-20">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
           <Link
             href="/dashboard"
-            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition"
+            className="p-2 -ml-1 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition active:scale-95"
             title="Back to Dashboard"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -98,29 +98,30 @@ export default function DirectChatPage() {
           </div>
 
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h2 className="font-bold text-sm text-white truncate">{chat.friendName}</h2>
-              <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-400 border border-emerald-500/20">
-                1-on-1 Private
+            <div className="flex items-center gap-1.5">
+              <h2 className="font-bold text-xs sm:text-sm text-white truncate max-w-[130px] sm:max-w-xs">{chat.friendName}</h2>
+              <span className="rounded bg-emerald-500/10 px-1.5 py-0.2 text-[9px] font-semibold text-emerald-400 border border-emerald-500/20 hidden xs:inline flex-shrink-0">
+                1-on-1
               </span>
             </div>
-            <p className="text-[11px] text-gray-400 truncate">{chat.friendEmail}</p>
+            <p className="text-[10px] text-gray-400 truncate max-w-[150px] sm:max-w-xs">{chat.friendEmail}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-xs">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setIsUploadOpen(true)}
-            className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 font-semibold text-white shadow hover:bg-brand-500 transition"
+            className="flex items-center gap-1.5 rounded-xl bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white shadow hover:bg-brand-500 transition active:scale-95"
           >
-            <FileText className="h-3.5 w-3.5" />
-            <span>Send Study Note</span>
+            <Plus className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Send Study Note</span>
+            <span className="inline sm:hidden">Note</span>
           </button>
         </div>
       </header>
 
       {/* Main Chat Feed */}
-      <main className="flex-1 flex flex-col min-w-0 bg-[#0B0F19] relative">
+      <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-[#0B0F19] relative">
         <ChatFeed
           messages={chat.messages}
           onPreview={(doc) => setPreviewDoc(doc)}
