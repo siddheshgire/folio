@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { 
   ShieldCheck, 
@@ -19,7 +19,10 @@ import {
 
 export default function MfaPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { verifyMfa } = useAuth();
+
+  const redirectUrl = searchParams.get("redirect") || "/dashboard";
 
   const [code, setCode] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState("");
@@ -31,7 +34,6 @@ export default function MfaPage() {
 
   const handleDigitChange = (index: number, value: string) => {
     if (value.length > 1) {
-      // User pasted full code
       const pasted = value.replace(/\D/g, "").slice(0, 6).split("");
       const updated = [...code];
       pasted.forEach((char, i) => {
@@ -78,7 +80,7 @@ export default function MfaPage() {
     setLoading(false);
 
     if (res.success) {
-      router.push("/dashboard");
+      router.push(redirectUrl);
     } else {
       setError(res.error || "Invalid MFA code");
     }
@@ -143,7 +145,6 @@ export default function MfaPage() {
                 {/* Simulated QR Code Canvas */}
                 <div className="flex flex-col items-center justify-center p-3 rounded-lg bg-white/5 border border-white/5">
                   <div className="flex items-center justify-center h-28 w-28 rounded-lg bg-white p-2">
-                    {/* SVG QR Placeholder */}
                     <div className="grid grid-cols-4 gap-1 w-full h-full p-1 bg-black rounded">
                       <div className="bg-white col-span-2 row-span-2 rounded-sm" />
                       <div className="bg-white" />

@@ -1,15 +1,19 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { loginSchema } from "@/lib/validation/auth";
-import { BookOpen, ShieldCheck, Lock, Mail, AlertCircle, ArrowRight, Sparkles, KeyRound } from "lucide-react";
+import { BookOpen, ShieldCheck, Lock, Mail, AlertCircle, ArrowRight, Sparkles, KeyRound, Clock } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login } = useAuth();
+
+  const redirectUrl = searchParams.get("redirect") || "/dashboard";
+  const isExpired = searchParams.get("expired") === "true";
 
   const [formData, setFormData] = useState({
     email: "",
@@ -42,7 +46,7 @@ export default function LoginPage() {
     setLoading(false);
 
     if (res.success) {
-      router.push("/mfa");
+      router.push(`/mfa?redirect=${encodeURIComponent(redirectUrl)}`);
     } else {
       setServerError(res.error || "Invalid credentials");
     }
@@ -52,7 +56,7 @@ export default function LoginPage() {
     setLoading(true);
     await login("siddharth@campus.edu", "Password123!");
     setLoading(false);
-    router.push("/mfa");
+    router.push(`/mfa?redirect=${encodeURIComponent(redirectUrl)}`);
   };
 
   return (
@@ -79,6 +83,14 @@ export default function LoginPage() {
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
         <div className="rounded-2xl border border-white/10 bg-[#111827] p-6 sm:p-8 shadow-2xl glass-panel">
+          {/* Expired Session Alert */}
+          {isExpired && (
+            <div className="mb-4 flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300">
+              <Clock className="h-4 w-4 flex-shrink-0" />
+              <span>Your session has expired. Please sign in again.</span>
+            </div>
+          )}
+
           {serverError && (
             <div className="mb-4 flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
               <AlertCircle className="h-4 w-4 flex-shrink-0" />

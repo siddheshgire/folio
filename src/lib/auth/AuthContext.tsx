@@ -3,6 +3,12 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { 
+  createSessionPayload, 
+  setClientSessionCookie, 
+  getClientSessionCookie, 
+  clearClientSessionCookie 
+} from "@/lib/auth/session";
 
 export interface UserProfile {
   id: string;
@@ -31,26 +37,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    // Check if session exists in local state
-    const saved = typeof window !== "undefined" ? localStorage.getItem(DEMO_USER_STORAGE_KEY) : null;
-    if (saved) {
-      try {
-        setUser(JSON.parse(saved));
-      } catch (e) {
-        localStorage.removeItem(DEMO_USER_STORAGE_KEY);
-      }
+    // 1. First check server session cookie (Edge Middleware standard)
+    const activeSession = getClientSessionCookie();
+
+    if (activeSession && activeSession.mfaVerified) {
+      setUser({
+        id: activeSession.userId,
+        email: activeSession.email,
+        displayName: activeSession.displayName,
+        mfaEnabled: true,
+      });
+    } else {
+      // If cookie expired or missing, clean up local storage
+      localStorage.removeItem(DEMO_USER_STORAGE_KEY);
+      setUser(null);
     }
+
     setLoading(false);
   }, []);
 
   const register = async (displayName: string, email: string, password: string) => {
     try {
-      // 1. Try real Supabase auth if URL is provided and not placeholder
       const supabase = createClient();
       const hasRealSupabase = process.env.NEXT_PUBLIC_SUPABASE_URL && !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder");
 
       if (hasRealSupabase) {
-        const { data, error } = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -60,16 +72,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) return { success: false, error: error.message };
       }
 
-      // Set user object with MFA requirement
-      const newUser: UserProfile = {
+      const pendingUser: UserProfile = {
         id: "usr_" + Math.random().toString(36).substring(2, 9),
         email,
         displayName,
         mfaEnabled: true,
       };
 
-      // Store temporary pending state
-      sessionStorage.setItem("folio_pending_user", JSON.stringify(newUser));
+      sessionStorage.setItem("folio_pending_user", JSON.stringify(pendingUser));
       return { success: true, requiresMfa: true };
     } catch (err: any) {
       return { success: false, error: err.message || "Failed to register" };
@@ -82,7 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const hasRealSupabase = process.env.NEXT_PUBLIC_SUPABASE_URL && !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder");
 
       if (hasRealSupabase) {
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
@@ -104,7 +114,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const verifyMfa = async (code: string) => {
-    // 6-digit code validation (for demo accept any 6-digit or default 123456)
     if (code.length !== 6 || !/^\d+$/.test(code)) {
       return { success: false, error: "Invalid 6-digit verification code" };
     }
@@ -116,6 +125,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const verifiedUser: UserProfile = JSON.parse(pending);
     setUser(verifiedUser);
+
+    // 1. Create secure 7-day session cookie for Middleware
+    const sessionPayload = createSessionPayload(
+      verifiedUser.id,
+      verifiedUser.email,
+      verifiedUser.displayName
+    );
+    setClientSessionCookie(sessionPayload);
+
+    // 2. Persist in local storage
     localStorage.setItem(DEMO_USER_STORAGE_KEY, JSON.stringify(verifiedUser));
     sessionStorage.removeItem("folio_pending_user");
 
@@ -129,9 +148,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       // ignore
     }
+
+    // 1. Clear session cookie
+    clearClientSessionCookie();
+
+    // 2. Clear state and storage
     setUser(null);
     localStorage.removeItem(DEMO_USER_STORAGE_KEY);
     sessionStorage.removeItem("folio_pending_user");
+
+    // 3. Redirect to login
     router.push("/login");
   };
 
