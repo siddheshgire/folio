@@ -11,10 +11,19 @@ import {
   Smile, 
   Sparkles,
   CheckCircle2,
-  Mic
+  Mic,
+  ExternalLink,
+  Bot,
+  Video,
+  Globe,
+  FileCode,
+  FileArchive,
+  Presentation
 } from "lucide-react";
 import { PreviewDocument } from "@/components/viewer/DocumentPreviewModal";
 import { VoiceNotePlayer } from "@/components/groups/VoiceNotePlayer";
+import { extractLinks } from "@/lib/utils/linkPreview";
+import { getFileMeta } from "@/lib/utils/fileMeta";
 
 export interface ChatMessage {
   id: string;
@@ -54,12 +63,13 @@ export function ChatFeed({
       {/* Intro Date Banner */}
       <div className="flex justify-center">
         <span className="rounded-full bg-[#1E293B] border border-white/5 px-3 py-1 text-[11px] font-semibold text-gray-400">
-          Today • Semester 5 Mid-Term Discussion
+          Real-Time Encrypted Session • Fast 4G / Offline Optimized
         </span>
       </div>
 
       {messages.map((msg) => {
         const isMe = msg.isMe;
+        const links = extractLinks(msg.content);
 
         return (
           <div
@@ -93,7 +103,7 @@ export function ChatFeed({
                     : "rounded-tl-sm bg-[#1E293B] border border-white/5"
                 }`}
               >
-                {/* Voice Note Player (if message is a voice note) */}
+                {/* Voice Note Player */}
                 {msg.voiceNoteDuration ? (
                   <VoiceNotePlayer
                     duration={msg.voiceNoteDuration}
@@ -101,67 +111,142 @@ export function ChatFeed({
                     isMe={isMe}
                   />
                 ) : (
-                  msg.content && <p className="leading-relaxed">{msg.content}</p>
+                  msg.content && (
+                    <p className="leading-relaxed whitespace-pre-wrap break-words">{msg.content}</p>
+                  )
                 )}
 
-                {/* Smart Study Drop File Card */}
-                {msg.resource && (
-                  <div className="mt-2.5 rounded-xl border border-white/10 bg-[#0F172A]/90 p-3 shadow-lg">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/30 flex-shrink-0">
-                        <FileText className="h-5 w-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <h4 
-                            onClick={() => onPreview(msg.resource!)}
-                            className="font-bold text-xs text-white truncate cursor-pointer hover:text-brand-300 transition"
-                          >
-                            {msg.resource.title}
-                          </h4>
-                        </div>
-                        <div className="text-[11px] text-gray-400 mt-0.5 truncate">
-                          {msg.resource.subject} • {msg.resource.unit}
-                        </div>
-                        <div className="text-[10px] text-gray-500 mt-0.5">
-                          Size: {msg.resource.size} • Original Quality
-                        </div>
+                {/* Smart Link Preview Cards (ChatGPT, Gemini, YouTube, Web Links) */}
+                {links.length > 0 && (
+                  <div className="mt-2.5 space-y-2">
+                    {links.map((link, idx) => {
+                      const isAi = link.provider === "chatgpt" || link.provider === "gemini" || link.provider === "claude";
 
-                        {/* Interactive Buttons */}
-                        <div className="mt-2.5 flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => onPreview(msg.resource!)}
-                            className="inline-flex items-center gap-1 rounded-lg bg-brand-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-brand-500 transition shadow"
-                          >
-                            <Eye className="h-3.5 w-3.5" />
-                            <span>Preview PDF</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onBookmark(msg.resource!.id)}
-                            className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition ${
-                              bookmarkedIds.includes(msg.resource.id)
-                                ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                                : "bg-white/10 text-gray-200 hover:bg-white/20"
-                            }`}
-                          >
-                            <Bookmark className={`h-3.5 w-3.5 ${bookmarkedIds.includes(msg.resource.id) ? "fill-amber-400" : ""}`} />
-                            <span>{bookmarkedIds.includes(msg.resource.id) ? "Bookmarked" : "Bookmark"}</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                      return (
+                        <div
+                          key={idx}
+                          className="rounded-xl border border-white/10 bg-[#0F172A]/90 p-3 shadow-lg hover:border-brand-500/40 transition group"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              {isAi ? (
+                                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex-shrink-0">
+                                  <Bot className="h-4 w-4" />
+                                </div>
+                              ) : link.provider === "youtube" ? (
+                                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-500/20 text-rose-400 border border-rose-500/30 flex-shrink-0">
+                                  <Video className="h-4 w-4" />
+                                </div>
+                              ) : (
+                                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/20 text-blue-400 border border-blue-500/30 flex-shrink-0">
+                                  <Globe className="h-4 w-4" />
+                                </div>
+                              )}
+                              <div className="min-w-0">
+                                <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-bold border ${link.badgeColor}`}>
+                                  {link.domain}
+                                </span>
+                                <h5 className="font-semibold text-xs text-white truncate mt-0.5">
+                                  {link.title}
+                                </h5>
+                              </div>
+                            </div>
 
-                    <div className="mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] text-gray-400">
-                      <span className="flex items-center gap-1 text-emerald-400">
-                        <CheckCircle2 className="h-3 w-3" />
-                        Auto-indexed to Study Vault
-                      </span>
-                      <span>SHA-256 Checksum Verified</span>
-                    </div>
+                            <a
+                              href={link.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="rounded-lg bg-brand-600/30 hover:bg-brand-600 text-brand-300 hover:text-white p-1.5 transition flex-shrink-0"
+                              title="Open link in new window"
+                            >
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </a>
+                          </div>
+
+                          <div className="mt-2 text-[10px] text-gray-400 truncate font-mono">
+                            {link.url}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
+
+                {/* Smart Study Drop File Card (Universal Formats: PDF, PPT, DOCX, ZIP, Code) */}
+                {msg.resource && (() => {
+                  const meta = getFileMeta(msg.resource.filename || msg.resource.title);
+
+                  return (
+                    <div className={`mt-2.5 rounded-xl border ${meta.borderCol} bg-[#0F172A]/90 p-3 shadow-lg`}>
+                      <div className="flex items-start gap-3">
+                        <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${meta.iconBg} border ${meta.borderCol} flex-shrink-0`}>
+                          {meta.category === "presentation" ? (
+                            <Presentation className="h-5 w-5" />
+                          ) : meta.category === "code" ? (
+                            <FileCode className="h-5 w-5" />
+                          ) : meta.category === "archive" ? (
+                            <FileArchive className="h-5 w-5" />
+                          ) : (
+                            <FileText className="h-5 w-5" />
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className={`rounded ${meta.badgeBg} ${meta.badgeText} px-1.5 py-0.2 text-[9px] font-bold border ${meta.borderCol}`}>
+                              {meta.label}
+                            </span>
+                            <h4 
+                              onClick={() => onPreview(msg.resource!)}
+                              className="font-bold text-xs text-white truncate cursor-pointer hover:text-brand-300 transition"
+                            >
+                              {msg.resource.title}
+                            </h4>
+                          </div>
+
+                          <div className="text-[11px] text-gray-400 mt-0.5 truncate">
+                            {msg.resource.subject} • {msg.resource.unit}
+                          </div>
+                          <div className="text-[10px] text-gray-400 mt-0.5">
+                            Size: {msg.resource.size} • Original Quality
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="mt-2.5 flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => onPreview(msg.resource!)}
+                              className="inline-flex items-center gap-1 rounded-lg bg-brand-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-brand-500 transition shadow"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                              <span>Preview</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => onBookmark(msg.resource!.id)}
+                              className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition ${
+                                bookmarkedIds.includes(msg.resource.id)
+                                  ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                                  : "bg-white/10 text-gray-200 hover:bg-white/20"
+                              }`}
+                            >
+                              <Bookmark className={`h-3.5 w-3.5 ${bookmarkedIds.includes(msg.resource.id) ? "fill-amber-400" : ""}`} />
+                              <span>{bookmarkedIds.includes(msg.resource.id) ? "Saved" : "Save"}</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] text-gray-400">
+                        <span className="flex items-center gap-1 text-emerald-400">
+                          <CheckCircle2 className="h-3 w-3" />
+                          Zero Compression Storage
+                        </span>
+                        <span>SHA-256 Verified</span>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Read receipt checkmark */}
                 <div className={`mt-1 flex items-center justify-end gap-1 text-[10px] ${isMe ? "text-brand-200" : "text-gray-400"}`}>

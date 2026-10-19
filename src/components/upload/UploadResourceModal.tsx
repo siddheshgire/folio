@@ -9,9 +9,13 @@ import {
   AlertCircle, 
   ShieldCheck, 
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  Presentation,
+  FileCode,
+  FileArchive
 } from "lucide-react";
 import { PreviewDocument } from "@/components/viewer/DocumentPreviewModal";
+import { getFileMeta } from "@/lib/utils/fileMeta";
 
 interface UploadResourceModalProps {
   isOpen: boolean;
@@ -69,16 +73,19 @@ export function UploadResourceModal({
       setProgress(75);
       setTimeout(() => {
         setProgress(100);
+        const filename = selectedFile?.name || `${title.replace(/\s+/g, "_")}.pdf`;
+        const fileMeta = getFileMeta(filename);
+
         const newResource: PreviewDocument = {
           id: "doc_" + Math.random().toString(36).substring(2, 9),
-          title: title || selectedFile?.name || "Uploaded Study Note",
-          filename: selectedFile?.name || `${title.replace(/\s+/g, "_")}.pdf`,
+          title: title || filename,
+          filename: filename,
           subject: subject,
           unit: unit,
-          size: selectedFile ? `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB` : "3.5 MB",
-          uploader: "Siddharth (You)",
+          size: selectedFile ? `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB` : "2.4 MB",
+          uploader: "You",
           uploadedAt: "Just now",
-          type: "pdf",
+          type: fileMeta.category === "image" ? "image" : fileMeta.category === "pdf" ? "pdf" : "notes",
           sha256: "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9",
         };
 
@@ -89,12 +96,14 @@ export function UploadResourceModal({
         onUploadSuccess(newResource, messageText);
         setUploading(false);
         onClose();
-      }, 500);
-    }, 500);
+      }, 400);
+    }, 400);
   };
 
+  const currentMeta = selectedFile ? getFileMeta(selectedFile.name) : null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-150">
       <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#111827] shadow-2xl overflow-hidden glass-panel">
         {/* Top Header */}
         <div className="flex items-center justify-between border-b border-white/10 bg-[#0F172A] px-5 py-4">
@@ -103,8 +112,8 @@ export function UploadResourceModal({
               <UploadCloud className="h-4 w-4" />
             </div>
             <div>
-              <h3 className="font-bold text-sm text-white">Upload Study Material</h3>
-              <p className="text-[11px] text-gray-400">Preserves original quality in private storage</p>
+              <h3 className="font-bold text-sm text-white">Upload Any Study File</h3>
+              <p className="text-[11px] text-gray-400">PDF, PPTX, DOCX, ZIP, Code & Image Support</p>
             </div>
           </div>
           <button
@@ -117,7 +126,7 @@ export function UploadResourceModal({
 
         {/* Modal Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* File Picker Drag & Drop Box */}
+          {/* Universal File Picker Drag & Drop Box */}
           <div
             onDragOver={(e) => e.preventDefault()}
             onDrop={handleDrop}
@@ -125,21 +134,34 @@ export function UploadResourceModal({
           >
             <input
               type="file"
-              accept=".pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg"
+              accept="*/*"
               onChange={handleFileChange}
               className="absolute inset-0 opacity-0 cursor-pointer"
             />
             {selectedFile ? (
               <div className="flex items-center justify-center gap-3 text-left">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500/20 text-brand-400 border border-brand-500/30 flex-shrink-0">
-                  <FileText className="h-5 w-5" />
+                <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${currentMeta?.iconBg} border ${currentMeta?.borderCol} flex-shrink-0`}>
+                  {currentMeta?.category === "presentation" ? (
+                    <Presentation className="h-5 w-5" />
+                  ) : currentMeta?.category === "code" ? (
+                    <FileCode className="h-5 w-5" />
+                  ) : currentMeta?.category === "archive" ? (
+                    <FileArchive className="h-5 w-5" />
+                  ) : (
+                    <FileText className="h-5 w-5" />
+                  )}
                 </div>
                 <div className="min-w-0">
-                  <div className="font-semibold text-xs text-white truncate max-w-xs">
-                    {selectedFile.name}
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-xs text-white truncate max-w-xs">
+                      {selectedFile.name}
+                    </span>
+                    <span className={`rounded ${currentMeta?.badgeBg} ${currentMeta?.badgeText} px-1.5 py-0.2 text-[9px] font-bold border ${currentMeta?.borderCol}`}>
+                      {currentMeta?.label}
+                    </span>
                   </div>
-                  <div className="text-[10px] text-gray-400">
-                    {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB • Ready for SHA-256 Checksum
+                  <div className="text-[10px] text-gray-400 mt-0.5">
+                    {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB • Ready for Zero-Compression Storage
                   </div>
                 </div>
               </div>
@@ -147,10 +169,10 @@ export function UploadResourceModal({
               <div className="space-y-1">
                 <UploadCloud className="h-8 w-8 mx-auto text-brand-400" />
                 <div className="text-xs font-semibold text-white">
-                  Drop your PDF, Lecture Slides, or Notes
+                  Drop ANY study file here (PDF, PPT, DOCX, ZIP, Code, Images)
                 </div>
                 <div className="text-[10px] text-gray-400">
-                  PDF, DOCX, PPTX, JPG, PNG up to 50 MB
+                  Preserves original bit-for-bit quality up to 50 MB
                 </div>
               </div>
             )}
@@ -185,6 +207,7 @@ export function UploadResourceModal({
                 <option value="CS501 Operating Systems">CS501 Operating Systems</option>
                 <option value="CS502 DBMS">CS502 DBMS</option>
                 <option value="CS503 Computer Networks">CS503 Computer Networks</option>
+                <option value="General Study Material">General Study Material</option>
               </select>
             </div>
 
@@ -223,7 +246,7 @@ export function UploadResourceModal({
           {uploading && (
             <div className="space-y-1 pt-1">
               <div className="flex items-center justify-between text-[11px] text-gray-400">
-                <span>Encrypting & Storing Original File...</span>
+                <span>Encrypting & Storing File...</span>
                 <span>{progress}%</span>
               </div>
               <div className="h-1.5 w-full rounded-full bg-gray-800 overflow-hidden">

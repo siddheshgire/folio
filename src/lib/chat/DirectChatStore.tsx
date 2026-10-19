@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { ChatMessage } from "@/components/groups/ChatFeed";
 import { PreviewDocument } from "@/components/viewer/DocumentPreviewModal";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { realtimeEngine } from "@/lib/realtime/broadcast";
 
 export interface CampusUser {
   id: string;
@@ -48,7 +49,6 @@ export function DirectChatProvider({ children }: { children: React.ReactNode }) 
       if (savedUsers) {
         setCampusUsers(JSON.parse(savedUsers));
       } else {
-        // Start clean with no mock data
         setCampusUsers([]);
       }
 
@@ -62,6 +62,35 @@ export function DirectChatProvider({ children }: { children: React.ReactNode }) 
       setCampusUsers([]);
       setDirectChats([]);
     }
+  }, []);
+
+  // Listen to cross-tab real-time sync for direct chats
+  useEffect(() => {
+    const unsubscribe = realtimeEngine.subscribe((event) => {
+      if (event.type === "DM_MESSAGE") {
+        setDirectChats((prev) =>
+          prev.map((c) => {
+            if (c.id === event.chatId) {
+              const alreadyHas = c.messages.some((m) => m.id === event.message.id);
+              if (alreadyHas) return c;
+              return {
+                ...c,
+                messages: [...c.messages, event.message],
+              };
+            }
+            return c;
+          })
+        );
+      } else if (event.type === "CAMPUS_USER_REGISTERED") {
+        setCampusUsers((prev) => {
+          const exists = prev.some((u) => u.email.toLowerCase() === event.user.email.toLowerCase());
+          if (exists) return prev;
+          return [event.user, ...prev];
+        });
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   // Whenever the active logged in user is authenticated, register them in campus users
@@ -98,6 +127,13 @@ export function DirectChatProvider({ children }: { children: React.ReactNode }) 
       try {
         localStorage.setItem(CAMPUS_USERS_STORAGE, JSON.stringify(updated));
       } catch (e) {}
+
+      // Broadcast new campus user to all active dashboards
+      realtimeEngine.broadcast({
+        type: "CAMPUS_USER_REGISTERED",
+        user: newUser,
+      });
+
       return updated;
     });
   };
@@ -121,7 +157,7 @@ export function DirectChatProvider({ children }: { children: React.ReactNode }) 
           id: "m_dm_start",
           sender: "System",
           senderColor: "bg-brand-600",
-          content: `This is the start of your private, end-to-end conversation with ${displayName} (${cleanEmail}). Chat, send voice notes, and share notes freely.`,
+          content: `This is the start of your private, real-time conversation with ${displayName} (${cleanEmail}). Chat, send voice notes, and share notes freely.`,
           timestamp: "Just now",
           isMe: false,
         },
@@ -160,6 +196,13 @@ export function DirectChatProvider({ children }: { children: React.ReactNode }) 
       return c;
     });
     saveChats(updated);
+
+    // Broadcast across tabs in real-time
+    realtimeEngine.broadcast({
+      type: "DM_MESSAGE",
+      chatId,
+      message: newMsg,
+    });
   };
 
   const sendDirectResource = (chatId: string, resource: PreviewDocument) => {
@@ -185,6 +228,12 @@ export function DirectChatProvider({ children }: { children: React.ReactNode }) 
       return c;
     });
     saveChats(updated);
+
+    realtimeEngine.broadcast({
+      type: "DM_MESSAGE",
+      chatId,
+      message: dropMsg,
+    });
   };
 
   return (

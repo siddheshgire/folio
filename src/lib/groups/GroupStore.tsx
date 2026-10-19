@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { PreviewDocument } from "@/components/viewer/DocumentPreviewModal";
 import { ChatMessage } from "@/components/groups/ChatFeed";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { realtimeEngine } from "@/lib/realtime/broadcast";
 
 export interface GroupMember {
   email: string;
@@ -56,7 +57,6 @@ export function GroupProvider({ children }: { children: React.ReactNode }) {
       if (saved) {
         setGroups(JSON.parse(saved));
       } else {
-        // Start completely clean - 0 groups!
         setGroups([]);
       }
     } catch (e) {
@@ -65,7 +65,53 @@ export function GroupProvider({ children }: { children: React.ReactNode }) {
     setLoading(false);
   }, []);
 
-  // Save to local storage whenever groups change
+  // Listen to cross-tab real-time sync
+  useEffect(() => {
+    const unsubscribe = realtimeEngine.subscribe((event) => {
+      if (event.type === "GROUP_MESSAGE") {
+        setGroups((prev) =>
+          prev.map((g) => {
+            if (g.id === event.groupId) {
+              const alreadyHas = g.messages.some((m) => m.id === event.message.id);
+              if (alreadyHas) return g;
+              return {
+                ...g,
+                messages: [...g.messages, event.message],
+              };
+            }
+            return g;
+          })
+        );
+      } else if (event.type === "GROUP_RESOURCE") {
+        setGroups((prev) =>
+          prev.map((g) => {
+            if (g.id === event.groupId) {
+              return {
+                ...g,
+                resources: [event.resource, ...g.resources],
+              };
+            }
+            return g;
+          })
+        );
+      } else if (event.type === "GROUP_MEMBER_ADDED") {
+        setGroups((prev) =>
+          prev.map((g) => {
+            if (g.id === event.groupId) {
+              return {
+                ...g,
+                members: [...g.members, event.member],
+              };
+            }
+            return g;
+          })
+        );
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   const saveGroups = (updated: StudyGroup[]) => {
     setGroups(updated);
     try {
@@ -103,7 +149,7 @@ export function GroupProvider({ children }: { children: React.ReactNode }) {
           id: "m_welcome",
           sender: "System",
           senderColor: "bg-brand-600",
-          content: `Welcome to ${name}! This is your private circle to chat freely, discuss exams, and upload original-quality study notes.`,
+          content: `Welcome to ${name}! This is your private circle to chat freely, discuss exams, and upload any PDF, PPT, DOCX, Code or AI links.`,
           timestamp: "Just now",
           isMe: false,
         },
@@ -141,28 +187,40 @@ export function GroupProvider({ children }: { children: React.ReactNode }) {
       online: true,
     };
 
+    const joinAnnouncement: ChatMessage = {
+      id: "m_joined_" + Date.now(),
+      sender: "System",
+      senderColor: "bg-emerald-600",
+      content: `${newMember.displayName} was added to the group by registered email (${trimmed}).`,
+      timestamp: "Just now",
+      isMe: false,
+    };
+
     const updated = groups.map((g) => {
       if (g.id === groupId) {
         return {
           ...g,
           members: [...g.members, newMember],
-          messages: [
-            ...g.messages,
-            {
-              id: "m_joined_" + Date.now(),
-              sender: "System",
-              senderColor: "bg-emerald-600",
-              content: `${newMember.displayName} was added to the group by registered email (${trimmed}).`,
-              timestamp: "Just now",
-              isMe: false,
-            },
-          ],
+          messages: [...g.messages, joinAnnouncement],
         };
       }
       return g;
     });
 
     saveGroups(updated);
+
+    // Broadcast in real-time to other tabs
+    realtimeEngine.broadcast({
+      type: "GROUP_MEMBER_ADDED",
+      groupId,
+      member: newMember,
+    });
+    realtimeEngine.broadcast({
+      type: "GROUP_MESSAGE",
+      groupId,
+      message: joinAnnouncement,
+    });
+
     return { success: true };
   };
 
@@ -196,37 +254,55 @@ export function GroupProvider({ children }: { children: React.ReactNode }) {
       return g;
     });
     saveGroups(updated);
+
+    // Broadcast across all open tabs/windows in zero milliseconds
+    realtimeEngine.broadcast({
+      type: "GROUP_MESSAGE",
+      groupId,
+      message: fullMsg,
+    });
   };
 
   const addResource = (groupId: string, resource: PreviewDocument, shareInChat = true) => {
+    let dropMsg: ChatMessage | null = null;
+    if (shareInChat) {
+      dropMsg = {
+        id: "m_drop_" + Date.now(),
+        sender: user?.displayName ? `${user.displayName} (You)` : "You",
+        senderColor: "bg-brand-600",
+        content: `Shared study resource: ${resource.title}`,
+        timestamp: "Just now",
+        isMe: true,
+        resource,
+        reactions: { "🔥": 1 },
+      };
+    }
+
     const updated = groups.map((g) => {
       if (g.id === groupId) {
-        const newResources = [resource, ...g.resources];
-        let newMessages = g.messages;
-
-        if (shareInChat) {
-          const dropMsg: ChatMessage = {
-            id: "m_drop_" + Date.now(),
-            sender: user?.displayName ? `${user.displayName} (You)` : "You",
-            senderColor: "bg-brand-600",
-            content: `Shared study resource: ${resource.title}`,
-            timestamp: "Just now",
-            isMe: true,
-            resource,
-            reactions: { "🔥": 1 },
-          };
-          newMessages = [...g.messages, dropMsg];
-        }
-
         return {
           ...g,
-          resources: newResources,
-          messages: newMessages,
+          resources: [resource, ...g.resources],
+          messages: dropMsg ? [...g.messages, dropMsg] : g.messages,
         };
       }
       return g;
     });
     saveGroups(updated);
+
+    // Broadcast real-time
+    realtimeEngine.broadcast({
+      type: "GROUP_RESOURCE",
+      groupId,
+      resource,
+    });
+    if (dropMsg) {
+      realtimeEngine.broadcast({
+        type: "GROUP_MESSAGE",
+        groupId,
+        message: dropMsg,
+      });
+    }
   };
 
   const deleteGroup = (groupId: string) => {

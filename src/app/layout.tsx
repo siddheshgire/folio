@@ -3,6 +3,7 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth/AuthContext";
 import { GroupProvider } from "@/lib/groups/GroupStore";
 import { DirectChatProvider } from "@/lib/chat/DirectChatStore";
+import { NetworkStatusIndicator } from "@/components/layout/NetworkStatusIndicator";
 
 export const metadata: Metadata = {
   title: "FOLIO — One Campus. One Library. Every Resource.",
@@ -21,6 +22,7 @@ export default function RootLayout({
           <GroupProvider>
             <DirectChatProvider>
               {children}
+              <NetworkStatusIndicator />
             </DirectChatProvider>
           </GroupProvider>
         </AuthProvider>
