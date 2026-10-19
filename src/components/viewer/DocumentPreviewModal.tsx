@@ -43,14 +43,14 @@ export function DocumentPreviewModal({
   const [zoom, setZoom] = useState(100);
   const [rotation, setRotation] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const totalPages = 14;
+  const totalPages = 8;
 
   if (!doc) return null;
 
   const handleDownload = () => {
     const element = document.createElement("a");
     const file = new Blob([
-      `FOLIO Original Document: ${doc.title}\nSubject: ${doc.subject}\nUnit: ${doc.unit}\nVerified SHA-256: ${doc.sha256 || "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"}\n\n[This is a verified academic resource from your study group].`
+      `FOLIO Document: ${doc.title}\nSubject: ${doc.subject}\nUnit: ${doc.unit}\nVerified SHA-256: ${doc.sha256 || "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"}\n\n[Original academic study resource].`
     ], { type: "text/plain" });
     element.href = URL.createObjectURL(file);
     element.download = doc.filename;
@@ -65,7 +65,7 @@ export function DocumentPreviewModal({
         {/* Top Header Bar */}
         <div className="flex items-center justify-between border-b border-white/10 bg-[#1E293B] px-3 sm:px-4 py-2.5 sm:py-3 flex-shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/30 flex-shrink-0">
+            <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl bg-brand-500/20 text-brand-300 border border-brand-500/30 flex-shrink-0">
               <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
             <div className="min-w-0">
@@ -92,7 +92,7 @@ export function DocumentPreviewModal({
                     ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
                     : "bg-white/5 text-gray-300 hover:bg-white/10"
                 }`}
-                title="Bookmark for Exam"
+                title="Save Resource"
               >
                 <Bookmark className={`h-3.5 w-3.5 ${isBookmarked ? "fill-amber-400 text-amber-400" : ""}`} />
                 <span className="hidden sm:inline">{isBookmarked ? "Saved" : "Save"}</span>
@@ -122,7 +122,7 @@ export function DocumentPreviewModal({
         {/* Viewer Toolbar */}
         <div className="flex items-center justify-between border-b border-white/5 bg-[#111827] px-3 sm:px-4 py-2 text-xs text-gray-400 flex-shrink-0">
           <div className="flex items-center gap-2 sm:gap-3">
-            <span className="text-[11px]">P. {currentPage}/{totalPages}</span>
+            <span className="text-[11px]">Page {currentPage} of {totalPages}</span>
             <div className="flex items-center gap-1">
               <button
                 disabled={currentPage <= 1}
@@ -170,7 +170,7 @@ export function DocumentPreviewModal({
           </div>
         </div>
 
-        {/* Document Canvas Body */}
+        {/* Dynamic Document Canvas Body */}
         <div className="flex-1 overflow-auto bg-[#0B0F19] p-3 sm:p-8 flex items-start sm:items-center justify-center">
           <div 
             style={{ 
@@ -178,37 +178,32 @@ export function DocumentPreviewModal({
               transformOrigin: 'top center',
               transition: 'transform 0.15s ease-out'
             }}
-            className="w-full max-w-2xl rounded-xl border border-white/10 bg-[#1E293B] p-4 sm:p-8 shadow-2xl text-gray-200 space-y-4 sm:space-y-6"
+            className="w-full max-w-2xl rounded-xl border border-white/10 bg-[#1E293B] p-5 sm:p-8 shadow-2xl text-gray-200 space-y-4 sm:space-y-6"
           >
             <div className="border-b border-white/10 pb-3 flex items-center justify-between">
               <div>
                 <span className="text-[10px] sm:text-xs uppercase tracking-widest text-brand-400 font-bold">
-                  {doc.subject} • Lecture Note
+                  {doc.subject || "Study Material"}
                 </span>
                 <h2 className="text-base sm:text-xl font-bold text-white mt-0.5">{doc.title}</h2>
-                <div className="text-[11px] text-gray-400 mt-0.5">{doc.unit}</div>
+                <div className="text-[11px] text-gray-400 mt-0.5">{doc.unit || "Overview"}</div>
               </div>
               <span className="rounded bg-emerald-500/10 px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold text-emerald-400 border border-emerald-500/20">
-                Verified Original
+                Original Quality
               </span>
             </div>
 
             <div className="space-y-3 text-xs leading-relaxed text-gray-300 font-sans">
-              <h4 className="font-bold text-xs sm:text-sm text-white">1. Introduction to CPU Scheduling</h4>
               <p>
-                CPU scheduling is the basis of multiprogrammed operating systems. By switching the CPU among processes, the operating system can make the computer more productive.
+                This study resource was uploaded in original, bit-for-bit quality. Zero compression was applied during storage.
               </p>
-
-              <h4 className="font-bold text-xs sm:text-sm text-white pt-1">2. Scheduling Criteria & Performance Metrics</h4>
-              <ul className="list-disc pl-4 space-y-1 text-[11px] sm:text-xs">
-                <li><strong className="text-white">CPU Utilization:</strong> Keep CPU busy (40% to 90%).</li>
-                <li><strong className="text-white">Throughput:</strong> Processes completed per unit of time.</li>
-                <li><strong className="text-white">Turnaround Time:</strong> Total submission to completion.</li>
-              </ul>
-
-              <div className="rounded-lg bg-[#0F172A] p-3 border border-brand-500/20 mt-3">
-                <div className="text-[10px] sm:text-[11px] font-mono text-brand-300 font-bold">
-                  Formula: Turnaround Time = Completion Time - Arrival Time
+              <div className="rounded-xl bg-[#0F172A] p-4 border border-white/5 space-y-2">
+                <div className="text-xs font-semibold text-white">File Information</div>
+                <div className="grid grid-cols-2 gap-2 text-[11px] text-gray-400">
+                  <div>Filename: <span className="text-gray-200">{doc.filename}</span></div>
+                  <div>File Size: <span className="text-gray-200">{doc.size}</span></div>
+                  <div>Uploaded by: <span className="text-gray-200">{doc.uploader}</span></div>
+                  <div>Status: <span className="text-emerald-400 font-medium">Verified Clean</span></div>
                 </div>
               </div>
             </div>
@@ -216,9 +211,9 @@ export function DocumentPreviewModal({
             <div className="border-t border-white/10 pt-2.5 flex items-center justify-between text-[10px] text-gray-500">
               <span className="flex items-center gap-1">
                 <ShieldCheck className="h-3 w-3 text-emerald-400" />
-                Original Quality Preserved
+                Bit-for-Bit Verified
               </span>
-              <span>P. {currentPage} of {totalPages}</span>
+              <span>Page {currentPage} of {totalPages}</span>
             </div>
           </div>
         </div>

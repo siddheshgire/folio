@@ -50,6 +50,11 @@ export default function GroupWorkspacePage() {
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [bookmarkedIds, setBookmarkedIds] = useState<string[]>([]);
 
+  // Dynamically derive subjects from actual uploaded files
+  const existingSubjects = group 
+    ? Array.from(new Set(group.resources.map((r) => r.subject).filter(Boolean)))
+    : [];
+
   // Window drag listeners
   useEffect(() => {
     let dragCounter = 0;
@@ -122,9 +127,9 @@ export default function GroupWorkspacePage() {
       title: file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " "),
       filename: file.name,
       subject: selectedSubject || "General Notes",
-      unit: "Unit 1: Fundamentals",
+      unit: "General Study Material",
       size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
-      uploader: user?.displayName ? `${user.displayName} (You)` : "Siddharth (You)",
+      uploader: user?.displayName ? `${user.displayName} (You)` : "You",
       uploadedAt: "Just now",
       type: "pdf",
       sha256: "4a7d1ed414474e4033ac29ccb8653d9b",
@@ -173,6 +178,7 @@ export default function GroupWorkspacePage() {
           groupName={group.name}
           inviteCode={group.inviteCode}
           members={group.members}
+          subjects={existingSubjects}
           activeChannel={activeChannel}
           onSelectChannel={setActiveChannel}
           selectedSubject={selectedSubject}
@@ -181,7 +187,7 @@ export default function GroupWorkspacePage() {
         />
       </div>
 
-      {/* MOBILE LEFT DRAWER (Channels & Members) */}
+      {/* MOBILE LEFT DRAWER */}
       {showMobileLeftDrawer && (
         <div className="fixed inset-0 z-50 md:hidden flex animate-in fade-in duration-200">
           <div 
@@ -194,6 +200,7 @@ export default function GroupWorkspacePage() {
               groupName={group.name}
               inviteCode={group.inviteCode}
               members={group.members}
+              subjects={existingSubjects}
               activeChannel={activeChannel}
               onSelectChannel={(ch) => {
                 setActiveChannel(ch);
@@ -210,7 +217,7 @@ export default function GroupWorkspacePage() {
         </div>
       )}
 
-      {/* 2. MAIN CHAT WORKSPACE (100% Mobile Safe with 100dvh) */}
+      {/* 2. MAIN CHAT WORKSPACE */}
       <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-[#0F172A] relative">
         {/* Workspace Top Header Bar */}
         <header className="h-14 sm:h-16 border-b border-white/5 bg-[#0B0F19]/95 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between flex-shrink-0 z-10">
@@ -228,18 +235,17 @@ export default function GroupWorkspacePage() {
             <span className="text-gray-500 font-medium text-sm hidden xs:inline">#</span>
             <div className="min-w-0">
               <h2 className="font-bold text-xs sm:text-sm text-white truncate max-w-[120px] xs:max-w-[160px] sm:max-w-xs">
-                {activeChannel === "general" ? "study-chat-drops" : activeChannel}
+                {activeChannel === "general" ? "general-chat" : activeChannel}
               </h2>
               <span className="text-[10px] text-gray-400 block xs:hidden truncate">
                 {group.name}
               </span>
             </div>
             <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-white/5 border border-white/10 px-2 py-0.5 text-[10px] text-gray-300 font-medium">
-              {group.members.length} Members
+              {group.members.length} Member{group.members.length === 1 ? "" : "s"}
             </span>
           </div>
 
-          {/* Action buttons (Clean responsive icons on mobile) */}
           <div className="flex items-center gap-1.5 sm:gap-2">
             <button
               type="button"
@@ -271,7 +277,7 @@ export default function GroupWorkspacePage() {
               {showRightSidebar ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
             </button>
 
-            {/* Mobile Vault Button (Opens Slide-over Drawer) */}
+            {/* Mobile Vault Button */}
             <button
               type="button"
               onClick={() => setShowMobileVaultDrawer(true)}
@@ -292,7 +298,7 @@ export default function GroupWorkspacePage() {
           onAddReaction={() => {}}
         />
 
-        {/* Input Bar with Voice Notes (Never Collides with Mobile Viewport) */}
+        {/* Input Bar with Voice Notes */}
         <ChatInput
           onSendMessage={handleSendMessage}
           onSendVoiceNote={handleSendVoiceNote}
@@ -368,6 +374,7 @@ export default function GroupWorkspacePage() {
         isOpen={isUploadOpen}
         onClose={() => setIsUploadOpen(false)}
         onUploadSuccess={handleUploadSuccess}
+        existingSubjects={existingSubjects}
         defaultSubject={selectedSubject}
       />
 

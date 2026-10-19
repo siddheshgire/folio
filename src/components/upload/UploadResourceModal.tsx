@@ -12,7 +12,8 @@ import {
   ArrowRight,
   Presentation,
   FileCode,
-  FileArchive
+  FileArchive,
+  BookOpen
 } from "lucide-react";
 import { PreviewDocument } from "@/components/viewer/DocumentPreviewModal";
 import { getFileMeta } from "@/lib/utils/fileMeta";
@@ -21,6 +22,7 @@ interface UploadResourceModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUploadSuccess: (newDoc: PreviewDocument, messageText?: string) => void;
+  existingSubjects?: string[];
   defaultSubject?: string | null;
 }
 
@@ -28,12 +30,13 @@ export function UploadResourceModal({
   isOpen,
   onClose,
   onUploadSuccess,
+  existingSubjects = [],
   defaultSubject,
 }: UploadResourceModalProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
-  const [subject, setSubject] = useState(defaultSubject || "CS501 Operating Systems");
-  const [unit, setUnit] = useState("Unit 2: Process Synchronization & CPU Scheduling");
+  const [subject, setSubject] = useState(defaultSubject || "");
+  const [unit, setUnit] = useState("");
   const [shareInChat, setShareInChat] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -66,11 +69,10 @@ export function UploadResourceModal({
     if (!selectedFile && !title) return;
 
     setUploading(true);
-    setProgress(30);
+    setProgress(35);
 
-    // Simulate reliable upload with SHA-256 hash calculation
     setTimeout(() => {
-      setProgress(75);
+      setProgress(80);
       setTimeout(() => {
         setProgress(100);
         const filename = selectedFile?.name || `${title.replace(/\s+/g, "_")}.pdf`;
@@ -80,9 +82,9 @@ export function UploadResourceModal({
           id: "doc_" + Math.random().toString(36).substring(2, 9),
           title: title || filename,
           filename: filename,
-          subject: subject,
-          unit: unit,
-          size: selectedFile ? `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB` : "2.4 MB",
+          subject: subject.trim() || "General Study Notes",
+          unit: unit.trim() || "General Reference",
+          size: selectedFile ? `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB` : "1.8 MB",
           uploader: "You",
           uploadedAt: "Just now",
           type: fileMeta.category === "image" ? "image" : fileMeta.category === "pdf" ? "pdf" : "notes",
@@ -90,14 +92,14 @@ export function UploadResourceModal({
         };
 
         const messageText = shareInChat 
-          ? `Uploaded new study resource: ${newResource.title}` 
+          ? `Uploaded study resource: ${newResource.title}` 
           : undefined;
 
         onUploadSuccess(newResource, messageText);
         setUploading(false);
         onClose();
-      }, 400);
-    }, 400);
+      }, 350);
+    }, 350);
   };
 
   const currentMeta = selectedFile ? getFileMeta(selectedFile.name) : null;
@@ -112,8 +114,8 @@ export function UploadResourceModal({
               <UploadCloud className="h-4 w-4" />
             </div>
             <div>
-              <h3 className="font-bold text-sm text-white">Upload Any Study File</h3>
-              <p className="text-[11px] text-gray-400">PDF, PPTX, DOCX, ZIP, Code & Image Support</p>
+              <h3 className="font-bold text-sm text-white">Upload Study File</h3>
+              <p className="text-[11px] text-gray-400">PDF, PPT, DOCX, ZIP, Code & Image Support</p>
             </div>
           </div>
           <button
@@ -126,7 +128,7 @@ export function UploadResourceModal({
 
         {/* Modal Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Universal File Picker Drag & Drop Box */}
+          {/* Universal File Picker */}
           <div
             onDragOver={(e) => e.preventDefault()}
             onDrop={handleDrop}
@@ -169,10 +171,10 @@ export function UploadResourceModal({
               <div className="space-y-1">
                 <UploadCloud className="h-8 w-8 mx-auto text-brand-400" />
                 <div className="text-xs font-semibold text-white">
-                  Drop ANY study file here (PDF, PPT, DOCX, ZIP, Code, Images)
+                  Drop any study file here (PDF, PPT, DOCX, ZIP, Code)
                 </div>
                 <div className="text-[10px] text-gray-400">
-                  Preserves original bit-for-bit quality up to 50 MB
+                  Original quality preserved without compression
                 </div>
               </div>
             )}
@@ -181,50 +183,44 @@ export function UploadResourceModal({
           {/* Title */}
           <div>
             <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1">
-              Resource Title
+              Resource Title *
             </label>
             <input
               type="text"
               required
-              placeholder="e.g. Unit 2 Scheduling Handout + Numericals"
+              placeholder="e.g. Lecture Handout, Midterm PYQs, Lab 3 Code"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full rounded-xl border border-white/10 bg-[#0B0F19] px-3.5 py-2 text-xs text-white placeholder-gray-500 focus:border-brand-500 focus:outline-none"
             />
           </div>
 
-          {/* Academic Subject & Unit selectors */}
+          {/* Free-form Subject & Unit/Topic inputs (Zero Hardcoded Syllabus) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1">
-                Subject
+                Subject Name
               </label>
-              <select
+              <input
+                type="text"
+                placeholder="e.g. Mathematics, AI, Physics"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-[#0B0F19] px-3 py-2 text-xs text-white focus:border-brand-500 focus:outline-none"
-              >
-                <option value="CS501 Operating Systems">CS501 Operating Systems</option>
-                <option value="CS502 DBMS">CS502 DBMS</option>
-                <option value="CS503 Computer Networks">CS503 Computer Networks</option>
-                <option value="General Study Material">General Study Material</option>
-              </select>
+                className="w-full rounded-xl border border-white/10 bg-[#0B0F19] px-3.5 py-2 text-xs text-white placeholder-gray-500 focus:border-brand-500 focus:outline-none"
+              />
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1">
-                Unit / Topic
+                Unit / Topic / Chapter
               </label>
-              <select
+              <input
+                type="text"
+                placeholder="e.g. Unit 1, Chapter 3, Solved Notes"
                 value={unit}
                 onChange={(e) => setUnit(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-[#0B0F19] px-3 py-2 text-xs text-white focus:border-brand-500 focus:outline-none"
-              >
-                <option value="Unit 1: Overview & Architecture">Unit 1: Overview & Architecture</option>
-                <option value="Unit 2: Process Synchronization & CPU Scheduling">Unit 2: CPU Scheduling</option>
-                <option value="Unit 3: Deadlocks & Prevention">Unit 3: Deadlocks & Prevention</option>
-                <option value="Unit 4: Virtual Memory & Paging">Unit 4: Virtual Memory & Paging</option>
-              </select>
+                className="w-full rounded-xl border border-white/10 bg-[#0B0F19] px-3.5 py-2 text-xs text-white placeholder-gray-500 focus:border-brand-500 focus:outline-none"
+              />
             </div>
           </div>
 
@@ -238,7 +234,7 @@ export function UploadResourceModal({
               className="h-4 w-4 rounded border-gray-700 bg-gray-900 text-brand-600 focus:ring-brand-500"
             />
             <label htmlFor="shareInChat" className="text-xs text-gray-300">
-              Also share as an interactive card in the group chat feed
+              Also post as an interactive card in the group chat feed
             </label>
           </div>
 
@@ -246,7 +242,7 @@ export function UploadResourceModal({
           {uploading && (
             <div className="space-y-1 pt-1">
               <div className="flex items-center justify-between text-[11px] text-gray-400">
-                <span>Encrypting & Storing File...</span>
+                <span>Storing File...</span>
                 <span>{progress}%</span>
               </div>
               <div className="h-1.5 w-full rounded-full bg-gray-800 overflow-hidden">
@@ -269,7 +265,7 @@ export function UploadResourceModal({
             ) : (
               <>
                 <ShieldCheck className="h-4 w-4" />
-                <span>Upload & Index Resource</span>
+                <span>Upload & Save Resource</span>
               </>
             )}
           </button>

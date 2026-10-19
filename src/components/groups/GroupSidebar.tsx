@@ -24,6 +24,7 @@ interface GroupSidebarProps {
   groupName: string;
   inviteCode: string;
   members: GroupMember[];
+  subjects?: string[];
   activeChannel: string;
   onSelectChannel: (channel: string) => void;
   selectedSubject: string | null;
@@ -36,6 +37,7 @@ export function GroupSidebar({
   groupName,
   inviteCode,
   members,
+  subjects = [],
   activeChannel,
   onSelectChannel,
   selectedSubject,
@@ -45,15 +47,9 @@ export function GroupSidebar({
   const [copiedInvite, setCopiedInvite] = useState(false);
 
   const channels = [
-    { id: "general", name: "study-chat-drops", icon: MessageSquare },
-    { id: "exam-prep", name: "midterm-prep", icon: Sparkles },
-    { id: "assignments", name: "assignment-help", icon: Hash },
-  ];
-
-  const subjects = [
-    { code: "CS501", name: "Operating Systems", count: 4 },
-    { code: "CS502", name: "DBMS", count: 3 },
-    { code: "CS503", name: "Computer Networks", count: 5 },
+    { id: "general", name: "general-chat", icon: MessageSquare },
+    { id: "study-notes", name: "study-materials", icon: BookOpen },
+    { id: "exam-prep", name: "exam-discussion", icon: Sparkles },
   ];
 
   const copyInvite = () => {
@@ -63,18 +59,18 @@ export function GroupSidebar({
   };
 
   return (
-    <aside className="w-64 sm:w-72 flex-shrink-0 flex flex-col border-r border-white/5 bg-[#0D1321] text-gray-300 select-none">
+    <aside className="w-64 sm:w-72 flex-shrink-0 flex flex-col border-r border-white/5 bg-[#0D1321] text-gray-300 select-none h-full">
       {/* Group Title Bar */}
-      <div className="p-4 border-b border-white/5 flex items-center justify-between bg-[#0F172A]">
+      <div className="p-4 border-b border-white/5 flex items-center justify-between bg-[#0F172A] flex-shrink-0">
         <div className="flex items-center gap-2.5 min-w-0">
           <Link href="/dashboard" className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/5">
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white font-bold text-xs flex-shrink-0">
-            {groupName.slice(0, 2).toUpperCase()}
+            {groupName ? groupName.slice(0, 2).toUpperCase() : "GR"}
           </div>
           <div className="min-w-0">
-            <h2 className="text-xs font-bold text-white truncate">{groupName}</h2>
+            <h2 className="text-xs font-bold text-white truncate">{groupName || "Study Circle"}</h2>
             <span className="text-[10px] text-emerald-400 flex items-center gap-1">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
               Private Circle
@@ -86,7 +82,7 @@ export function GroupSidebar({
           type="button"
           onClick={copyInvite}
           title="Copy Private Invite Link"
-          className="p-1.5 rounded-lg bg-brand-500/10 text-brand-400 hover:bg-brand-500/20 transition border border-brand-500/20"
+          className="p-1.5 rounded-lg bg-brand-500/10 text-brand-400 hover:bg-brand-500/20 transition border border-brand-500/20 flex-shrink-0"
         >
           {copiedInvite ? <Check className="h-4 w-4 text-emerald-400" /> : <Share2 className="h-4 w-4" />}
         </button>
@@ -95,8 +91,8 @@ export function GroupSidebar({
       <div className="flex-1 overflow-y-auto p-3 space-y-6">
         {/* Discussion Channels */}
         <div>
-          <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 px-2 mb-1.5 flex items-center justify-between">
-            <span>Channels</span>
+          <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 px-2 mb-1.5">
+            Channels
           </div>
           <div className="space-y-0.5">
             {channels.map((ch) => {
@@ -120,10 +116,10 @@ export function GroupSidebar({
           </div>
         </div>
 
-        {/* Academic Syllabus Shortcuts */}
+        {/* Dynamic Subjects (Populated ONLY when real notes are uploaded) */}
         <div>
           <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 px-2 mb-1.5 flex items-center justify-between">
-            <span>Syllabus Shortcuts</span>
+            <span>Subjects ({subjects.length})</span>
             {selectedSubject && (
               <button
                 onClick={() => onSelectSubject(null)}
@@ -133,30 +129,34 @@ export function GroupSidebar({
               </button>
             )}
           </div>
-          <div className="space-y-1">
-            {subjects.map((sub) => {
-              const isSelected = selectedSubject === sub.code;
-              return (
-                <button
-                  key={sub.code}
-                  onClick={() => onSelectSubject(isSelected ? null : sub.code)}
-                  className={`w-full flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition border ${
-                    isSelected
-                      ? "bg-brand-500/15 border-brand-500/40 text-brand-300 font-semibold"
-                      : "border-transparent text-gray-400 hover:bg-white/5 hover:text-gray-200"
-                  }`}
-                >
-                  <div className="flex items-center gap-2 truncate">
-                    <BookOpen className="h-3 w-3 text-brand-400 flex-shrink-0" />
-                    <span className="truncate">{sub.name}</span>
-                  </div>
-                  <span className="text-[10px] text-gray-400 px-1.5 py-0.2 rounded bg-black/30">
-                    {sub.count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+
+          {subjects.length === 0 ? (
+            <div className="px-2 py-2 text-[11px] text-gray-500 italic">
+              No subjects yet. Upload a note to create your first subject folder.
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {subjects.map((subName) => {
+                const isSelected = selectedSubject === subName;
+                return (
+                  <button
+                    key={subName}
+                    onClick={() => onSelectSubject(isSelected ? null : subName)}
+                    className={`w-full flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition border ${
+                      isSelected
+                        ? "bg-brand-500/15 border-brand-500/40 text-brand-300 font-semibold"
+                        : "border-transparent text-gray-400 hover:bg-white/5 hover:text-gray-200"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 truncate">
+                      <BookOpen className="h-3 w-3 text-brand-400 flex-shrink-0" />
+                      <span className="truncate">{subName}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Real Members List + Add Member Action */}
@@ -179,7 +179,7 @@ export function GroupSidebar({
                 <div className="flex items-center gap-2 min-w-0">
                   <div className="relative flex-shrink-0">
                     <div className="h-6 w-6 rounded-full bg-brand-600 flex items-center justify-center text-[10px] font-bold text-white uppercase">
-                      {m.displayName.slice(0, 2)}
+                      {m.displayName ? m.displayName.slice(0, 2) : "ME"}
                     </div>
                     {m.online && (
                       <span className="absolute bottom-0 right-0 h-1.5 w-1.5 rounded-full bg-emerald-400 ring-2 ring-[#0D1321]" />
@@ -203,7 +203,7 @@ export function GroupSidebar({
       </div>
 
       {/* Footer Security Badge */}
-      <div className="p-3 border-t border-white/5 bg-[#0A0E18] text-[10px] text-gray-400 flex items-center justify-between">
+      <div className="p-3 border-t border-white/5 bg-[#0A0E18] text-[10px] text-gray-400 flex items-center justify-between flex-shrink-0">
         <span className="flex items-center gap-1.5">
           <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
           <span>MFA Enforced</span>
