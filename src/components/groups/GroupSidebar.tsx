@@ -14,21 +14,33 @@ import {
   ArrowLeft,
   Hash,
   ShieldCheck,
-  Sparkles
+  Sparkles,
+  UserPlus
 } from "lucide-react";
+import { GroupMember } from "@/lib/groups/GroupStore";
 
 interface GroupSidebarProps {
+  groupId: string;
+  groupName: string;
+  inviteCode: string;
+  members: GroupMember[];
   activeChannel: string;
   onSelectChannel: (channel: string) => void;
   selectedSubject: string | null;
   onSelectSubject: (subject: string | null) => void;
+  onOpenAddMember: () => void;
 }
 
 export function GroupSidebar({
+  groupId,
+  groupName,
+  inviteCode,
+  members,
   activeChannel,
   onSelectChannel,
   selectedSubject,
   onSelectSubject,
+  onOpenAddMember,
 }: GroupSidebarProps) {
   const [copiedInvite, setCopiedInvite] = useState(false);
 
@@ -39,20 +51,13 @@ export function GroupSidebar({
   ];
 
   const subjects = [
-    { code: "CS501", name: "Operating Systems", count: 12 },
-    { code: "CS502", name: "DBMS", count: 8 },
-    { code: "CS503", name: "Computer Networks", count: 15 },
-  ];
-
-  const members = [
-    { name: "Siddharth (You)", role: "Admin", online: true, color: "bg-brand-600" },
-    { name: "Aryan Mehta", role: "Member", online: true, color: "bg-indigo-600" },
-    { name: "Kavya Sharma", role: "Member", online: true, color: "bg-emerald-600" },
-    { name: "Rohan Verma", role: "Member", online: false, color: "bg-amber-600" },
+    { code: "CS501", name: "Operating Systems", count: 4 },
+    { code: "CS502", name: "DBMS", count: 3 },
+    { code: "CS503", name: "Computer Networks", count: 5 },
   ];
 
   const copyInvite = () => {
-    navigator.clipboard.writeText("https://folio.app/join/sq-cs-8921");
+    navigator.clipboard.writeText(`https://folio.app/join/${inviteCode}`);
     setCopiedInvite(true);
     setTimeout(() => setCopiedInvite(false), 2000);
   };
@@ -66,10 +71,10 @@ export function GroupSidebar({
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white font-bold text-xs flex-shrink-0">
-            CS
+            {groupName.slice(0, 2).toUpperCase()}
           </div>
           <div className="min-w-0">
-            <h2 className="text-xs font-bold text-white truncate">CS 3rd Year Squad</h2>
+            <h2 className="text-xs font-bold text-white truncate">{groupName}</h2>
             <span className="text-[10px] text-emerald-400 flex items-center gap-1">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
               Private Circle
@@ -91,7 +96,7 @@ export function GroupSidebar({
         {/* Discussion Channels */}
         <div>
           <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 px-2 mb-1.5 flex items-center justify-between">
-            <span>Group Channels</span>
+            <span>Channels</span>
           </div>
           <div className="space-y-0.5">
             {channels.map((ch) => {
@@ -115,7 +120,7 @@ export function GroupSidebar({
           </div>
         </div>
 
-        {/* Academic Syllabus Filter */}
+        {/* Academic Syllabus Shortcuts */}
         <div>
           <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 px-2 mb-1.5 flex items-center justify-between">
             <span>Syllabus Shortcuts</span>
@@ -154,27 +159,40 @@ export function GroupSidebar({
           </div>
         </div>
 
-        {/* Active Friend List */}
+        {/* Real Members List + Add Member Action */}
         <div>
-          <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 px-2 mb-1.5">
-            Members ({members.length})
+          <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 px-2 mb-2 flex items-center justify-between">
+            <span>Members ({members.length})</span>
+            <button
+              onClick={onOpenAddMember}
+              className="text-brand-400 hover:text-brand-300 font-semibold flex items-center gap-0.5 text-[10px]"
+              title="Add registered email to circle"
+            >
+              <UserPlus className="h-3 w-3" />
+              <span>+ Add</span>
+            </button>
           </div>
+
           <div className="space-y-1.5">
             {members.map((m, i) => (
               <div key={i} className="flex items-center justify-between px-2 py-1 text-xs">
-                <div className="flex items-center gap-2">
-                  <div className="relative">
-                    <div className={`h-6 w-6 rounded-full ${m.color} flex items-center justify-center text-[10px] font-bold text-white uppercase`}>
-                      {m.name.slice(0, 2)}
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="relative flex-shrink-0">
+                    <div className="h-6 w-6 rounded-full bg-brand-600 flex items-center justify-center text-[10px] font-bold text-white uppercase">
+                      {m.displayName.slice(0, 2)}
                     </div>
                     {m.online && (
                       <span className="absolute bottom-0 right-0 h-1.5 w-1.5 rounded-full bg-emerald-400 ring-2 ring-[#0D1321]" />
                     )}
                   </div>
-                  <span className="text-gray-300">{m.name}</span>
+                  <div className="min-w-0">
+                    <div className="text-gray-200 font-medium truncate text-xs">{m.displayName}</div>
+                    <div className="text-[9px] text-gray-400 truncate">{m.email}</div>
+                  </div>
                 </div>
-                {m.role === "Admin" && (
-                  <span className="text-[10px] text-brand-400 bg-brand-500/10 px-1.5 py-0.5 rounded border border-brand-500/20 font-semibold">
+
+                {m.role === "admin" && (
+                  <span className="text-[9px] text-brand-400 bg-brand-500/10 px-1.5 py-0.5 rounded border border-brand-500/20 font-semibold flex-shrink-0 ml-1">
                     Admin
                   </span>
                 )}

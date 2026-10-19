@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { useGroups } from "@/lib/groups/GroupStore";
+import { CreateGroupModal } from "@/components/groups/CreateGroupModal";
 import { 
   BookOpen, 
   MessageSquare, 
@@ -17,11 +19,18 @@ import {
   Sparkles,
   ExternalLink,
   ChevronRight,
-  HardDrive
+  HardDrive,
+  Plus,
+  Share2
 } from "lucide-react";
 
 export default function DashboardPage() {
   const { user, logout } = useAuth();
+  const { groups } = useGroups();
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+
+  // Total calculated metrics
+  const totalFiles = groups.reduce((acc, g) => acc + g.resources.length, 0);
 
   return (
     <div className="min-h-screen bg-[#0B0F19] text-gray-100 flex flex-col">
@@ -35,7 +44,7 @@ export default function DashboardPage() {
             <span className="font-extrabold text-white text-base">FOLIO</span>
           </Link>
           <span className="text-gray-600">/</span>
-          <span className="text-xs font-semibold text-gray-300">Student Workspace</span>
+          <span className="text-xs font-semibold text-gray-300">Workspace</span>
         </div>
 
         <div className="flex items-center gap-3">
@@ -51,7 +60,7 @@ export default function DashboardPage() {
               {user?.displayName ? user.displayName.slice(0, 2) : "ME"}
             </div>
             <div className="hidden md:block text-left text-xs">
-              <div className="font-semibold text-white">{user?.displayName || "Siddharth"}</div>
+              <div className="font-semibold text-white">{user?.displayName || "Student"}</div>
               <div className="text-[10px] text-gray-400">{user?.email || "student@campus.edu"}</div>
             </div>
             <button
@@ -75,23 +84,24 @@ export default function DashboardPage() {
               Academic Term 2026-2027
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
-              Welcome back, {user?.displayName || "Siddharth"}!
+              Welcome, {user?.displayName || "Student"}!
             </h1>
             <p className="mt-1 text-sm text-gray-400 max-w-xl">
-              Your friend study group is active. 3 new lecture notes were dropped today in <strong className="text-gray-200">CS 3rd Year Squad</strong>.
+              {groups.length === 0
+                ? "You have a fresh workspace. Create your first study circle or ask a friend to add your email to their group."
+                : `You are in ${groups.length} active study circle${groups.length === 1 ? "" : "s"}. Share notes and chat with total freedom.`}
             </p>
           </div>
 
           {/* Quick Action Button */}
           <div className="flex items-center gap-3">
-            <Link
-              href="/group/cs-squad"
-              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-500/25 hover:from-brand-500 hover:to-brand-600 transition"
+            <button
+              onClick={() => setIsCreateOpen(true)}
+              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-500/25 hover:from-brand-500 hover:to-brand-600 transition active:scale-95"
             >
-              <MessageSquare className="h-4 w-4" />
-              <span>Open Group Chat & Vault</span>
-              <ChevronRight className="h-4 w-4" />
-            </Link>
+              <Plus className="h-4 w-4" />
+              <span>Create New Circle</span>
+            </button>
           </div>
         </div>
 
@@ -102,8 +112,8 @@ export default function DashboardPage() {
               <Users className="h-5 w-5" />
             </div>
             <div>
-              <div className="text-xs text-gray-400">My Study Groups</div>
-              <div className="text-xl font-bold text-white">2 Active</div>
+              <div className="text-xs text-gray-400">My Study Circles</div>
+              <div className="text-xl font-bold text-white">{groups.length} Active</div>
             </div>
           </div>
 
@@ -112,8 +122,8 @@ export default function DashboardPage() {
               <FileText className="h-5 w-5" />
             </div>
             <div>
-              <div className="text-xs text-gray-400">Accessible Files</div>
-              <div className="text-xl font-bold text-white">35 Notes & PDFs</div>
+              <div className="text-xs text-gray-400">Total Uploaded Notes</div>
+              <div className="text-xl font-bold text-white">{totalFiles} PDFs & Docs</div>
             </div>
           </div>
 
@@ -122,8 +132,8 @@ export default function DashboardPage() {
               <Bookmark className="h-5 w-5" />
             </div>
             <div>
-              <div className="text-xs text-gray-400">Bookmarked</div>
-              <div className="text-xl font-bold text-white">7 Exam Resources</div>
+              <div className="text-xs text-gray-400">Saved for Exams</div>
+              <div className="text-xl font-bold text-white">0 Bookmarks</div>
             </div>
           </div>
 
@@ -133,114 +143,105 @@ export default function DashboardPage() {
             </div>
             <div>
               <div className="text-xs text-gray-400">Free Storage Used</div>
-              <div className="text-xl font-bold text-white">48.2 MB / 1 GB</div>
+              <div className="text-xl font-bold text-white">0.0 MB / 1 GB</div>
             </div>
           </div>
         </div>
 
-        {/* Groups & Channels preview */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 rounded-2xl border border-white/10 bg-[#111827] p-6 space-y-4">
-            <div className="flex items-center justify-between">
+        {/* Study Circles List or Clean Empty State */}
+        <div className="rounded-2xl border border-white/10 bg-[#111827] p-6 space-y-6">
+          <div className="flex items-center justify-between pb-4 border-b border-white/5">
+            <div>
               <h2 className="text-base font-bold text-white flex items-center gap-2">
                 <Users className="h-4 w-4 text-brand-400" />
                 Your Study Circles
               </h2>
-              <span className="text-xs text-brand-400 font-semibold cursor-pointer hover:underline">
-                + Create New Circle
-              </span>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Private collaborative spaces for chatting and sharing semester materials
+              </p>
             </div>
-
-            <div className="space-y-3">
-              {/* Group 1 */}
-              <Link
-                href="/group/cs-squad"
-                className="group flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-white/5 bg-[#0F172A] p-4 hover:border-brand-500/40 hover:bg-brand-500/5 transition"
-              >
-                <div className="flex items-start gap-3.5">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white font-bold text-sm shadow-md">
-                    CS
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-white text-sm group-hover:text-brand-300 transition">
-                        CS 3rd Year Squad
-                      </span>
-                      <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-400 border border-emerald-500/20">
-                        Admin
-                      </span>
-                    </div>
-                    <div className="text-xs text-gray-400 mt-0.5">
-                      4 Members • 3 Subjects • Latest file: <em>OS_Unit2_CPU_Scheduling.pdf</em>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 self-end sm:self-center">
-                  <span className="text-xs font-semibold text-brand-400 group-hover:translate-x-1 transition-transform flex items-center gap-1">
-                    Enter Chat & Vault <ChevronRight className="h-4 w-4" />
-                  </span>
-                </div>
-              </Link>
-
-              {/* Group 2 */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-white/5 bg-[#0F172A] p-4 opacity-75">
-                <div className="flex items-start gap-3.5">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-600 text-white font-bold text-sm shadow-md">
-                    ML
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-white text-sm">
-                        Machine Learning Project Group
-                      </span>
-                      <span className="rounded bg-gray-800 px-1.5 py-0.5 text-[10px] font-medium text-gray-300">
-                        Member
-                      </span>
-                    </div>
-                    <div className="text-xs text-gray-400 mt-0.5">
-                      3 Members • 12 Files • Pinned dataset and research papers
-                    </div>
-                  </div>
-                </div>
-
-                <span className="text-xs text-gray-500 self-end sm:self-center">
-                  Last active yesterday
-                </span>
-              </div>
-            </div>
+            <button
+              onClick={() => setIsCreateOpen(true)}
+              className="text-xs font-semibold text-brand-400 hover:text-brand-300 flex items-center gap-1"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Create Circle</span>
+            </button>
           </div>
 
-          {/* Quick Security & Academic Syllabus shortcut */}
-          <div className="rounded-2xl border border-white/10 bg-[#111827] p-6 space-y-4">
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-emerald-400" />
-              Security Checkup
-            </h2>
-
-            <div className="space-y-3 text-xs">
-              <div className="flex items-center justify-between p-3 rounded-xl bg-[#0B0F19] border border-white/5">
-                <span className="text-gray-300">Two-Factor Authentication</span>
-                <span className="text-emerald-400 font-semibold flex items-center gap-1">
-                  <ShieldCheck className="h-3.5 w-3.5" /> Enforced
-                </span>
+          {groups.length === 0 ? (
+            /* Clean Empty State */
+            <div className="text-center py-16 px-4 max-w-md mx-auto space-y-4">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-500/10 text-brand-400 border border-brand-500/20 mx-auto">
+                <Users className="h-8 w-8" />
               </div>
-              <div className="flex items-center justify-between p-3 rounded-xl bg-[#0B0F19] border border-white/5">
-                <span className="text-gray-300">File Download Security</span>
-                <span className="text-brand-300 font-semibold">Signed URLs (15m)</span>
-              </div>
-              <div className="flex items-center justify-between p-3 rounded-xl bg-[#0B0F19] border border-white/5">
-                <span className="text-gray-300">Hash Deduplication</span>
-                <span className="text-brand-300 font-semibold">SHA-256 Active</span>
+              <h3 className="text-lg font-bold text-white">No Study Circles Yet</h3>
+              <p className="text-xs text-gray-400 leading-relaxed">
+                Create your first circle for your friends, classmates, or project team. Once created, you can invite your friends directly using their registered email.
+              </p>
+              <div className="pt-2">
+                <button
+                  onClick={() => setIsCreateOpen(true)}
+                  className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-6 py-3 text-xs font-semibold text-white shadow-lg shadow-brand-500/25 hover:bg-brand-500 active:scale-95 transition"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Create Your First Study Circle</span>
+                </button>
               </div>
             </div>
+          ) : (
+            /* Real Active Circles */
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {groups.map((group) => (
+                <Link
+                  key={group.id}
+                  href={`/group/${group.id}`}
+                  className="group rounded-xl border border-white/5 bg-[#0F172A] p-5 hover:border-brand-500/40 hover:bg-brand-500/5 transition flex flex-col justify-between space-y-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3.5 min-w-0">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-600 text-white font-bold text-sm shadow-md flex-shrink-0">
+                        {group.name.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-white text-sm truncate group-hover:text-brand-300 transition">
+                            {group.name}
+                          </h4>
+                          <span className="rounded bg-brand-500/10 px-1.5 py-0.5 text-[10px] font-medium text-brand-300 border border-brand-500/20">
+                            {group.academicYear || "Active"}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1 line-clamp-2">
+                          {group.description || "Private group for notes and discussions."}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
-            <div className="mt-4 pt-4 border-t border-white/5 text-[11px] text-gray-400">
-              Files are stored in private object storage buckets. Direct URL guessing is impossible.
+                  <div className="pt-3 border-t border-white/5 flex items-center justify-between text-xs text-gray-400">
+                    <div className="flex items-center gap-3">
+                      <span>{group.members.length} Member{group.members.length === 1 ? "" : "s"}</span>
+                      <span>•</span>
+                      <span>{group.resources.length} Notes</span>
+                    </div>
+
+                    <span className="font-semibold text-brand-400 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                      Open Circle <ChevronRight className="h-4 w-4" />
+                    </span>
+                  </div>
+                </Link>
+              ))}
             </div>
-          </div>
+          )}
         </div>
       </main>
+
+      {/* Create Group Modal */}
+      <CreateGroupModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+      />
     </div>
   );
 }

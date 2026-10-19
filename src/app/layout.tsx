@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth/AuthContext";
+import { GroupProvider } from "@/lib/groups/GroupStore";
 
 export const metadata: Metadata = {
   title: "FOLIO — One Campus. One Library. Every Resource.",
@@ -16,7 +17,9 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className="min-h-screen bg-[#0B0F19] text-gray-100 antialiased selection:bg-brand-500 selection:text-white">
         <AuthProvider>
-          {children}
+          <GroupProvider>
+            {children}
+          </GroupProvider>
         </AuthProvider>
       </body>
     </html>
