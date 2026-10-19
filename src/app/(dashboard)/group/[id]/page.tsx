@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { GroupSidebar } from "@/components/groups/GroupSidebar";
@@ -9,7 +9,8 @@ import { ChatInput } from "@/components/groups/ChatInput";
 import { StudyVaultSidebar } from "@/components/groups/StudyVaultSidebar";
 import { DocumentPreviewModal, PreviewDocument } from "@/components/viewer/DocumentPreviewModal";
 import { UploadResourceModal } from "@/components/upload/UploadResourceModal";
-import { FolderGit2, MessageSquare, PanelRightClose, PanelRightOpen, ShieldCheck } from "lucide-react";
+import { DragDropOverlay } from "@/components/upload/DragDropOverlay";
+import { FolderGit2, MessageSquare, PanelRightClose, PanelRightOpen, ShieldCheck, Mic } from "lucide-react";
 
 export default function GroupWorkspacePage() {
   const params = useParams();
@@ -18,6 +19,7 @@ export default function GroupWorkspacePage() {
   const [activeChannel, setActiveChannel] = useState("general");
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [showRightSidebar, setShowRightSidebar] = useState(true);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
 
   // Active Modals
   const [previewDoc, setPreviewDoc] = useState<PreviewDocument | null>(null);
@@ -64,7 +66,7 @@ export default function GroupWorkspacePage() {
     },
   ]);
 
-  // Initial WhatsApp-style chat feed
+  // Initial WhatsApp-style chat feed with Voice Note support
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "m1",
@@ -86,15 +88,25 @@ export default function GroupWorkspacePage() {
     },
     {
       id: "m3",
+      sender: "Aryan Mehta",
+      senderColor: "bg-indigo-600",
+      content: "",
+      voiceNoteDuration: "0:24",
+      timestamp: "10:45 AM",
+      isMe: false,
+      reactions: { "💡": 3 },
+    },
+    {
+      id: "m4",
       sender: "Kavya Sharma",
       senderColor: "bg-emerald-600",
-      content: "Life saver!! Bookmarking this right now. Don't forget we also have the DBMS lab test on Thursday.",
+      content: "Life saver!! Aryan, that voice explanation for Round Robin with quantum = 2 cleared up my confusion 100%.",
       timestamp: "10:46 AM",
       isMe: false,
       reactions: { "💡": 2 },
     },
     {
-      id: "m4",
+      id: "m5",
       sender: "Rohan Verma",
       senderColor: "bg-amber-600",
       content: "Thanks man! It's so nice that files aren't compressed like on WhatsApp. Handwriting is super sharp on desktop.",
@@ -103,6 +115,65 @@ export default function GroupWorkspacePage() {
       reactions: { "💯": 4 },
     },
   ]);
+
+  // Window drag listeners
+  useEffect(() => {
+    let dragCounter = 0;
+
+    const handleWindowDragEnter = (e: DragEvent) => {
+      e.preventDefault();
+      dragCounter++;
+      if (e.dataTransfer?.types.includes("Files")) {
+        setIsDraggingFile(true);
+      }
+    };
+
+    const handleWindowDragLeave = (e: DragEvent) => {
+      e.preventDefault();
+      dragCounter--;
+      if (dragCounter <= 0) {
+        setIsDraggingFile(false);
+      }
+    };
+
+    const handleWindowDrop = (e: DragEvent) => {
+      e.preventDefault();
+      dragCounter = 0;
+      setIsDraggingFile(false);
+    };
+
+    window.addEventListener("dragenter", handleWindowDragEnter);
+    window.addEventListener("dragleave", handleWindowDragLeave);
+    window.addEventListener("drop", handleWindowDrop);
+
+    return () => {
+      window.removeEventListener("dragenter", handleWindowDragEnter);
+      window.removeEventListener("dragleave", handleWindowDragLeave);
+      window.removeEventListener("drop", handleWindowDrop);
+    };
+  }, []);
+
+  // Dropping files on the full-screen overlay
+  const handleFullWindowFileDrop = (files: FileList) => {
+    setIsDraggingFile(false);
+    if (!files.length) return;
+
+    const file = files[0];
+    const newDoc: PreviewDocument = {
+      id: "doc_" + Math.random().toString(36).substring(2, 9),
+      title: file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " "),
+      filename: file.name,
+      subject: selectedSubject || "CS501 Operating Systems",
+      unit: "Unit 2: Process Synchronization & CPU Scheduling",
+      size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
+      uploader: user?.displayName ? `${user.displayName} (You)` : "Siddharth (You)",
+      uploadedAt: "Just now",
+      type: "pdf",
+      sha256: "4a7d1ed414474e4033ac29ccb8653d9b",
+    };
+
+    handleUploadSuccess(newDoc, `Dropped new study resource: ${newDoc.title}`);
+  };
 
   // Sending a new text message
   const handleSendMessage = (text: string) => {
@@ -116,6 +187,21 @@ export default function GroupWorkspacePage() {
       reactions: {},
     };
     setMessages((prev) => [...prev, newMsg]);
+  };
+
+  // Sending a new voice note
+  const handleSendVoiceNote = (duration: string) => {
+    const voiceMsg: ChatMessage = {
+      id: "m_" + Date.now(),
+      sender: user?.displayName ? `${user.displayName} (You)` : "Siddharth (You)",
+      senderColor: "bg-brand-600",
+      content: "",
+      voiceNoteDuration: duration,
+      timestamp: "Just now",
+      isMe: true,
+      reactions: { "🔥": 1 },
+    };
+    setMessages((prev) => [...prev, voiceMsg]);
   };
 
   // Dropping an uploaded file into the group vault + chat feed
@@ -159,7 +245,7 @@ export default function GroupWorkspacePage() {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#0B0F19] text-gray-100 selection:bg-brand-500 selection:text-white">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#0B0F19] text-gray-100 selection:bg-brand-500 selection:text-white relative">
       {/* 1. Left Group Sidebar (Channels, Subjects, Members) */}
       <GroupSidebar
         activeChannel={activeChannel}
@@ -212,9 +298,10 @@ export default function GroupWorkspacePage() {
           onAddReaction={handleAddReaction}
         />
 
-        {/* Input Bar */}
+        {/* Input Bar with Voice Notes */}
         <ChatInput
           onSendMessage={handleSendMessage}
+          onSendVoiceNote={handleSendVoiceNote}
           onOpenUpload={() => setIsUploadOpen(true)}
         />
       </main>
@@ -245,6 +332,13 @@ export default function GroupWorkspacePage() {
         onClose={() => setIsUploadOpen(false)}
         onUploadSuccess={handleUploadSuccess}
         defaultSubject={selectedSubject}
+      />
+
+      {/* Full-Screen Drag-and-Drop Overlay */}
+      <DragDropOverlay
+        isDragging={isDraggingFile}
+        onDrop={handleFullWindowFileDrop}
+        onDragLeave={() => setIsDraggingFile(false)}
       />
     </div>
   );

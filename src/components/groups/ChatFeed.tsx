@@ -10,9 +10,11 @@ import {
   Bookmark, 
   Smile, 
   Sparkles,
-  CheckCircle2
+  CheckCircle2,
+  Mic
 } from "lucide-react";
 import { PreviewDocument } from "@/components/viewer/DocumentPreviewModal";
+import { VoiceNotePlayer } from "@/components/groups/VoiceNotePlayer";
 
 export interface ChatMessage {
   id: string;
@@ -22,6 +24,7 @@ export interface ChatMessage {
   timestamp: string;
   isMe: boolean;
   resource?: PreviewDocument;
+  voiceNoteDuration?: string;
   reactions?: Record<string, number>;
 }
 
@@ -90,8 +93,16 @@ export function ChatFeed({
                     : "rounded-tl-sm bg-[#1E293B] border border-white/5"
                 }`}
               >
-                {/* Text Message */}
-                {msg.content && <p className="leading-relaxed">{msg.content}</p>}
+                {/* Voice Note Player (if message is a voice note) */}
+                {msg.voiceNoteDuration ? (
+                  <VoiceNotePlayer
+                    duration={msg.voiceNoteDuration}
+                    sender={msg.sender}
+                    isMe={isMe}
+                  />
+                ) : (
+                  msg.content && <p className="leading-relaxed">{msg.content}</p>
+                )}
 
                 {/* Smart Study Drop File Card */}
                 {msg.resource && (
